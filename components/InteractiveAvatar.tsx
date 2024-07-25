@@ -19,18 +19,12 @@ import {
 import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
-import OpenAI from "openai";
+import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
+import fetch from "cross-fetch";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-import { Deepgram } from '@deepgram/sdk'; // Importa Deepgram SDK
 
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
-
-const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY; // Agrega tu clave API de Deepgram
-const deepgram = new Deepgram(deepgramApiKey);
+const DEEPGRAM_API_KEY = "YOUR_DEEPGRAM_API_KEY"; // Reemplaza con tu clave de API de Deepgram
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -42,12 +36,16 @@ export default function InteractiveAvatar() {
   const [voiceId, setVoiceId] = useState<string>("");
   const [data, setData] = useState<NewSessionData>();
   const [text, setText] = useState<string>("");
-  const [initialized, setInitialized] = useState(false); // Track initialization
-  const [recording, setRecording] = useState(false); // Track recording state
+  const [initialized, setInitialized] = useState(false);
+  const [recording, setRecording] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const transcribing = useRef<boolean>(false);
+  const lastTranscriptionTime = useRef<number>(Date.now());
+  const intervalId = useRef<NodeJS.Timeout | null>(null);
+
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -57,7 +55,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      // Send the ChatGPT response to the Interactive Avatar
+      //send the ChatGPT response to the Interactive Avatar
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -113,7 +111,9 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${voiceId ? "This custom voice ID may not be supported." : ""}`
+        `There was an error starting the session. ${
+          voiceId ? "This custom voice ID may not be supported." : ""
+        }`
       );
     }
     setIsLoadingSession(false);
@@ -204,47 +204,66 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
-  function startRecording() {
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        const deepgramSocket = deepgram.transcription.live({
-          punctuate: true,
-        });
-        mediaRecorder.current = new MediaRecorder(stream);
+  async function startRecording() {
+    if (transcribing.current) return;
+    transcribing.current = true;
 
-        mediaRecorder.current.ondataavailable = (event) => {
-          const audioBlob = new Blob([event.data], { type: event.data.type });
-          const reader = new FileReader();
-          reader.onload = () => {
-            const buffer = reader.result as ArrayBuffer;
-            deepgramSocket.send(buffer);
-          };
-          reader.readAsArrayBuffer(audioBlob);
+    // Crear cliente Deepgram
+    const deepgram = createClient(DEEPGRAM_API_KEY);
+    const connection = deepgram.transcription.live({
+      punctuate: true,
+      model: "nova-2",
+      language: "es",
+    });
+
+    // Manejar transcripción en tiempo real
+    connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+      if (data.channel.alternatives[0].transcript) {
+        console.log("Transcription: ", data.channel.alternatives[0].transcript);
+        setInput(data.channel.alternatives[0].transcript);
+        lastTranscriptionTime.current = Date.now();
+      }
+    });
+
+    // Manejar apertura de conexión
+    connection.on(LiveTranscriptionEvents.Open, () => {
+      console.log("Connection opened.");
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = (event) => {
+          connection.send(event.data);
         };
-
-        deepgramSocket.on('open', () => {
-          console.log('Deepgram connection opened.');
-        });
-
-        deepgramSocket.on('close', () => {
-          console.log('Deepgram connection closed.');
-        });
-
-        deepgramSocket.on('transcriptReceived', (transcription) => {
-          console.log('Transcription: ', transcription);
-          if (transcription.is_final) {
-            setInput(transcription.channel.alternatives[0].transcript);
-            resetTimer();
-          }
-        });
-
-        mediaRecorder.current.start(1000); // Send data to Deepgram every second
+        mediaRecorder.start(100); // Enviar fragmentos de audio cada 100ms
         setRecording(true);
-      })
-      .catch((error) => {
-        console.error("Error accessing microphone:", error);
+
+        // Manejar cierre de grabación
+        mediaRecorder.onstop = () => {
+          setRecording(false);
+          transcribing.current = false;
+          connection.close();
+        };
       });
+    });
+
+    // Manejar cierre de conexión
+    connection.on(LiveTranscriptionEvents.Close, () => {
+      console.log("Connection closed.");
+      if (intervalId.current) {
+        clearInterval(intervalId.current);
+      }
+    });
+
+    // Intervalo para detectar inactividad de 3 segundos
+    intervalId.current = setInterval(() => {
+      if (Date.now() - lastTranscriptionTime.current > 3000) {
+        if (transcribing.current) {
+          console.log("No transcription for 3 seconds, sending message...");
+          transcribing.current = false;
+          handleSubmit();
+          connection.close();
+        }
+      }
+    }, 1000);
   }
 
   function stopRecording() {
@@ -254,20 +273,9 @@ export default function InteractiveAvatar() {
     }
   }
 
-  let timer: NodeJS.Timeout;
-  function resetTimer() {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      if (input) {
-        handleSubmit();
-        setInput(""); // Clear input after sending message
-      }
-    }, 3000); // 3 seconds delay
-  }
-
   async function transcribeAudio(audioBlob: Blob) {
     try {
-      // Convert Blob to File
+      // Convertir Blob a File
       const audioFile = new File([audioBlob], "recording.wav", {
         type: "audio/wav",
       });
@@ -449,4 +457,3 @@ export default function InteractiveAvatar() {
     </div>
   );
 }
-
