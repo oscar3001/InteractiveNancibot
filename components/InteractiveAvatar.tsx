@@ -24,7 +24,7 @@ import fetch from "cross-fetch";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEEPGRAM_API_KEY = "YOUR_DEEPGRAM_API_KEY"; // Reemplaza con tu clave de API de Deepgram
+const DEEPGRAM_API_KEY = "aeea1334bf142235e1f53360341cf4bb0afe1bae"; // Reemplaza con tu clave de API de Deepgram
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
