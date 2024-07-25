@@ -55,7 +55,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      //send the ChatGPT response to the Interactive Avatar
+      // Enviar la respuesta de ChatGPT al Avatar Interactivo
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -204,7 +204,9 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
-  async function startRecording() {
+
+
+    async function startRecording() {
     if (transcribing.current) return;
     transcribing.current = true;
 
@@ -230,6 +232,7 @@ export default function InteractiveAvatar() {
       console.log("Connection opened.");
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.current = mediaRecorder;
         mediaRecorder.ondataavailable = (event) => {
           connection.send(event.data);
         };
@@ -457,3 +460,4 @@ export default function InteractiveAvatar() {
     </div>
   );
 }
+  
