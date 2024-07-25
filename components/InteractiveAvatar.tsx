@@ -19,8 +19,7 @@ import {
 import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
-import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
-import fetch from "cross-fetch";
+import { Deepgram } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
@@ -55,7 +54,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      // Enviar la respuesta de ChatGPT al Avatar Interactivo
+      //send the ChatGPT response to the Interactive Avatar
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -204,14 +203,12 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
-
-
-    async function startRecording() {
+  async function startRecording() {
     if (transcribing.current) return;
     transcribing.current = true;
 
     // Crear cliente Deepgram
-    const deepgram = createClient(DEEPGRAM_API_KEY);
+    const deepgram = new Deepgram(DEEPGRAM_API_KEY);
     const connection = deepgram.transcription.live({
       punctuate: true,
       model: "nova-2",
@@ -219,7 +216,7 @@ export default function InteractiveAvatar() {
     });
 
     // Manejar transcripción en tiempo real
-    connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+    connection.addListener("transcriptReceived", (data) => {
       if (data.channel.alternatives[0].transcript) {
         console.log("Transcription: ", data.channel.alternatives[0].transcript);
         setInput(data.channel.alternatives[0].transcript);
@@ -228,11 +225,10 @@ export default function InteractiveAvatar() {
     });
 
     // Manejar apertura de conexión
-    connection.on(LiveTranscriptionEvents.Open, () => {
+    connection.addListener("open", () => {
       console.log("Connection opened.");
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         const mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.current = mediaRecorder;
         mediaRecorder.ondataavailable = (event) => {
           connection.send(event.data);
         };
@@ -249,7 +245,7 @@ export default function InteractiveAvatar() {
     });
 
     // Manejar cierre de conexión
-    connection.on(LiveTranscriptionEvents.Close, () => {
+    connection.addListener("close", () => {
       console.log("Connection closed.");
       if (intervalId.current) {
         clearInterval(intervalId.current);
@@ -273,24 +269,6 @@ export default function InteractiveAvatar() {
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
       setRecording(false);
-    }
-  }
-
-  async function transcribeAudio(audioBlob: Blob) {
-    try {
-      // Convertir Blob a File
-      const audioFile = new File([audioBlob], "recording.wav", {
-        type: "audio/wav",
-      });
-      const response = await openai.audio.transcriptions.create({
-        model: "whisper-1",
-        file: audioFile,
-      });
-      const transcription = response.text;
-      console.log("Transcription: ", transcription);
-      setInput(transcription);
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
     }
   }
 
@@ -460,4 +438,3 @@ export default function InteractiveAvatar() {
     </div>
   );
 }
-  
