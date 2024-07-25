@@ -38,8 +38,8 @@ export default function InteractiveAvatar() {
   const [voiceId, setVoiceId] = useState<string>("");
   const [data, setData] = useState<NewSessionData>();
   const [text, setText] = useState<string>("");
-  const [initialized, setInitialized] = useState(false); // Track initialization
-  const [recording, setRecording] = useState(false); // Track recording state
+  const [initialized, setInitialized] = useState(false);
+  const [recording, setRecording] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const mediaStream = useRef<HTMLVideoElement>(null);
@@ -454,3 +454,4 @@ export default function InteractiveAvatar() {
     </div>
   );
 }
+
