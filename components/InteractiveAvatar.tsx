@@ -40,6 +40,8 @@ export default function InteractiveAvatar() {
   const [text, setText] = useState<string>("");
   const [initialized, setInitialized] = useState(false); // Track initialization
   const [recording, setRecording] = useState(false); // Track recording state
+  const [transcription, setTranscription] = useState("");
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -228,6 +230,10 @@ export default function InteractiveAvatar() {
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
       setRecording(false);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      sendMessage(); // Envía cualquier transcripción restante cuando se detiene la grabación
     }
   }
 
@@ -241,12 +247,45 @@ export default function InteractiveAvatar() {
         model: "whisper-1",
         file: audioFile,
       });
-      const transcription = response.text;
-      console.log("Transcription: ", transcription);
-      setInput(transcription);
+      const newTranscription = response.text;
+      console.log("Transcription: ", newTranscription);
+
+      // Actualiza la transcripción completa
+      setTranscription((prev) => prev + " " + newTranscription);
+
+      // Reinicia el temporizador
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      const newTimeoutId = setTimeout(() => {
+        sendMessage();
+      }, 3000); // 3 segundos de inactividad
+      setTimeoutId(newTimeoutId);
     } catch (error) {
       console.error("Error transcribing audio:", error);
     }
+  }
+
+  async function sendMessage() {
+    if (!initialized || !avatar.current) {
+      setDebug("Avatar API not initialized");
+      return;
+    }
+    if (!transcription.trim()) {
+      setDebug("No transcription to send");
+      return;
+    }
+
+    setIsLoadingChat(true);
+    await avatar.current
+      .speak({
+        taskRequest: { text: transcription.trim(), sessionId: data?.sessionId },
+      })
+      .catch((e) => {
+        setDebug(e.message);
+      });
+    setIsLoadingChat(false);
+    setTranscription(""); // Limpia la transcripción después de enviarla
   }
 
   return (
