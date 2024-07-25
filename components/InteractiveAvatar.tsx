@@ -53,7 +53,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      //send the ChatGPT response to the Interactive Avatar
+      // Send the ChatGPT response to the Interactive Avatar
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -109,7 +109,9 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${voiceId ? "This custom voice ID may not be supported." : ""}`
+        `There was an error starting the session. ${
+          voiceId ? "This custom voice ID may not be supported." : ""
+        }`
       );
     }
     setIsLoadingSession(false);
@@ -291,6 +293,11 @@ export default function InteractiveAvatar() {
               <div className="flex flex-col gap-2 w-full">
                 <p className="text-sm font-medium leading-none">
                   Custom Avatar ID (optional)
+               ### Parte 2
+
+Continuación del código completo para `InteractiveAvatar.tsx`:
+
+```typescript
                 </p>
                 <Input
                   value={avatarId}
