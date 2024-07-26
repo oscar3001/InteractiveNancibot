@@ -286,6 +286,7 @@ export default function InteractiveAvatar() {
     }
     return false;
   }
+
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
@@ -408,6 +409,7 @@ export default function InteractiveAvatar() {
                 setDebug("Please enter text to send to ChatGPT");
                 return;
               }
+              console.log("Sending message to handleSubmit: ", input);
               handleSubmit();
             }}
             setInput={setInput}
