@@ -6,6 +6,10 @@ import {
 } from "@heygen/streaming-avatar";
 import {
   Button,
+  Card,
+  CardBody,
+  CardFooter,
+  Divider,
   Spinner,
   Tooltip,
 } from "@nextui-org/react";
@@ -18,9 +22,9 @@ import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
 const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg "; // Reemplaza con la URL de tu imagen
 
-export default function InteractiveAvatar() {
+export default function Nancibot() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
@@ -298,110 +302,113 @@ export default function InteractiveAvatar() {
 
   return (
     <div className="w-full flex flex-col gap-4">
-      <div className="h-[500px] flex flex-col justify-center items-center">
-        {stream ? (
-          <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
-            <video
-              ref={mediaStream}
-              autoPlay
-              playsInline
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "contain",
-              }}
-            >
-              <track kind="captions" />
-            </video>
-            <div className="flex flex-col gap-2 absolute bottom-3 right-3">
+      <Card>
+        <CardBody className="h-[500px] flex flex-col justify-center items-center">
+          {stream ? (
+            <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
+              <video
+                ref={mediaStream}
+                autoPlay
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              >
+                <track kind="captions" />
+              </video>
+              <div className="flex flex-col gap-2 absolute bottom-3 right-3">
+                <Button
+                  size="md"
+                  onClick={handleInterrupt}
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                  variant="shadow"
+                >
+                  Interrupt task
+                </Button>
+                <Button
+                  size="md"
+                  onClick={endSession}
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                  variant="shadow"
+                >
+                  End session
+                </Button>
+              </div>
+            </div>
+          ) : !isLoadingSession ? (
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <Button
                 size="md"
-                onClick={handleInterrupt}
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                onClick={startSession}
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
                 variant="shadow"
               >
-                Interrupt task
-              </Button>
-              <Button
-                size="md"
-                onClick={endSession}
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
-                variant="shadow"
-              >
-                End session
+                Llamar a Nancy Bot
               </Button>
             </div>
-          </div>
-        ) : !isLoadingSession ? (
-          <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <Button
-              size="md"
-              onClick={startSession}
-              className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
-              variant="shadow"
-            >
-              Llamar a Nancy Bot
-            </Button>
-          </div>
-        ) : (
-          <Spinner size="lg" color="default" />
-        )}
-      </div>
-      <div className="flex flex-col gap-3">
-        <InteractiveAvatarTextInput
-          label="Repeat"
-          placeholder="Ingrese mensaje que se va a repetir"
-          input={text}
-          onSubmit={handleSpeak}
-          setInput={setText}
-          disabled={!stream}
-          loading={isLoadingRepeat}
-        />
-        <InteractiveAvatarTextInput
-          label="Chat"
-          placeholder="Escribe mensaje al avatar"
-          input={input}
-          onSubmit={() => {
-            setIsLoadingChat(true);
-            if (!input) {
-              setDebug("Escribe mensaje al avatar");
-              return;
-            }
-            handleSubmit();
-          }}
-          setInput={setInput}
-          loading={isLoadingChat}
-          endContent={
-            <Tooltip
-              content={!recording ? "Inicio Escucha" : "Detener Escucha"}
-            >
-              <Button
-                onClick={!recording ? startRecording : stopRecording}
-                isDisabled={!stream}
-                isIconOnly
-                className={clsx(
-                  "mr-4 text-white",
-                  !recording
-                    ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
-                    : ""
-                )}
-                size="sm"
-                variant="shadow"
+          ) : (
+            <Spinner size="lg" color="default" />
+          )}
+        </CardBody>
+        <Divider />
+        <CardFooter className="flex flex-col gap-3">
+          <InteractiveAvatarTextInput
+            label="Repeat"
+            placeholder="Inggrese mensaje que se va a repetir"
+            input={text}
+            onSubmit={handleSpeak}
+            setInput={setText}
+            disabled={!stream}
+            loading={isLoadingRepeat}
+          />
+          <InteractiveAvatarTextInput
+            label="Chat"
+            placeholder="Escribe mensaje al avatar"
+            input={input}
+            onSubmit={() => {
+              setIsLoadingChat(true);
+              if (!input) {
+                setDebug("Escribe mensaje al avatar");
+                return;
+              }
+              handleSubmit();
+            }}
+            setInput={setInput}
+            loading={isLoadingChat}
+            endContent={
+              <Tooltip
+                content={!recording ? "Inicio Escucha" : "Detener Escucha"}
               >
-                {!recording ? (
-                  <Microphone size={20} />
-                ) : (
-                  <>
-                    <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
-                    <MicrophoneStage size={20} />
-                  </>
-                )}
-              </Button>
-            </Tooltip>
-          }
-          disabled={!stream}
-        />
-      </div>
+                <Button
+                  onClick={!recording ? startRecording : stopRecording}
+                  isDisabled={!stream}
+                  isIconOnly
+                  className={clsx(
+                    "mr-4 text-white",
+                    !recording
+                      ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
+                      : ""
+                  )}
+                  size="sm"
+                  variant="shadow"
+                >
+                  {!recording ? (
+                    <Microphone size={20} />
+                  ) : (
+                    <>
+                      <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
+                      <MicrophoneStage size={20} />
+                    </>
+                  )}
+                </Button>
+              </Tooltip>
+            }
+            disabled={!stream}
+          />
+        </CardFooter>
+      </Card>
       <p className="font-mono text-right">
         <span className="font-bold">Console:</span>
         <br />
