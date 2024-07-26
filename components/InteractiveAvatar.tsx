@@ -19,7 +19,8 @@ import {
 import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
-import OpenAI from "openai";
+import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
+import fetch from "cross-fetch";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
@@ -109,7 +110,9 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${voiceId ? "This custom voice ID may not be supported." : ""}`
+        `There was an error starting the session. ${
+          voiceId ? "This custom voice ID may not be supported." : ""
+        }`
       );
     }
     setIsLoadingSession(false);
@@ -201,6 +204,53 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
+  // Deepgram integration for live transcription
+  async function transcribeAudioDeepgram(audioBlob) {
+    try {
+      const connection = deepgram.listen.live({
+        punctuate: true,
+        model: "nova",
+        language: "es",
+      });
+
+      connection.on(LiveTranscriptionEvents.Open, () => {
+        console.log("WebSocket connection opened with Deepgram.");
+      });
+
+      connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+        console.log("Deepgram transcription: ", data);
+        if (data.channel.alternatives[0]) {
+          const transcript = data.channel.alternatives[0].transcript;
+          setInput(transcript);
+        }
+      });
+
+      connection.on(LiveTranscriptionEvents.Metadata, (data) => {
+        console.log("Deepgram metadata: ", data);
+      });
+
+      connection.on(LiveTranscriptionEvents.Close, () => {
+        console.log("WebSocket connection closed with Deepgram.");
+      });
+
+      connection.on(LiveTranscriptionEvents.Error, (error) => {
+        console.error("Deepgram error: ", error);
+      });
+
+      const audioStream = new Response(audioBlob).body;
+      const reader = audioStream.getReader();
+      reader.read().then(function process({ done, value }) {
+        if (done) {
+          connection.finish();
+          return;
+        }
+        connection.send(value);
+        reader.read().then(process);
+      });
+    } catch (error) {
+      console.error("Error during Deepgram transcription:", error);
+    }
+  }
 
   function startRecording() {
     navigator.mediaDevices
@@ -215,7 +265,7 @@ export default function InteractiveAvatar() {
             type: "audio/wav",
           });
           audioChunks.current = [];
-          transcribeAudio(audioBlob);
+          transcribeAudioDeepgram(audioBlob);
         };
         mediaRecorder.current.start();
         setRecording(true);
@@ -232,187 +282,170 @@ export default function InteractiveAvatar() {
     }
   }
 
-  async function transcribeAudio(audioBlob: Blob) {
-    try {
-      // Convert Blob to File
-      const audioFile = new File([audioBlob], "recording.wav", {
-        type: "audio/wav",
-      });
-      const response = await openai.audio.transcriptions.create({
-        model: "whisper-1",
-        file: audioFile,
-      });
-      const transcription = response.text;
-      console.log("Transcription: ", transcription);
-      setInput(transcription);
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-    }
-  }
-
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
         <CardBody className="h-[500px] flex flex-col justify-center items-center">
           {stream ? (
             <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
-              <video
-                ref={mediaStream}
-                autoPlay
-                playsInline
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
-              >
-                <track kind="captions" />
-              </video>
-              <div className="flex flex-col gap-2 absolute bottom-3 right-3">
-                <Button
-                  size="md"
-                  onClick={handleInterrupt}
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
-                  variant="shadow"
-                >
-                  Interrupt task
-                </Button>
-                <Button
-                  size="md"
-                  onClick={endSession}
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300  text-white rounded-lg"
-                  variant="shadow"
-                >
-                  End session
-                </Button>
-              </div>
-            </div>
-          ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center">
-              <div className="flex flex-col gap-2 w-full">
-                <p className="text-sm font-medium leading-none">
-                  Custom Avatar ID (optional)
-                </p>
-                <Input
-                  value={avatarId}
-                  onChange={(e) => setAvatarId(e.target.value)}
-                  placeholder="Enter a custom avatar ID"
-                />
-                <Select
-                  placeholder="Or select one from these example avatars"
-                  size="md"
-                  onChange={(e) => {
-                    setAvatarId(e.target.value);
+                <video
+                  ref={mediaStream}
+                  autoPlay
+                  playsInline
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
                   }}
                 >
-                  {AVATARS.map((avatar) => (
-                    <SelectItem
-                      key={avatar.avatar_id}
-                      textValue={avatar.avatar_id}
-                    >
-                      {avatar.name}
-                    </SelectItem>
-                  ))}
-                </Select>
+                  <track kind="captions" />
+                </video>
+                <div className="flex flex-col gap-2 absolute bottom-3 right-3">
+                  <Button
+                    size="md"
+                    onClick={handleInterrupt}
+                    className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                    variant="shadow"
+                  >
+                    Interrupt task
+                  </Button>
+                  <Button
+                    size="md"
+                    onClick={endSession}
+                    className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                    variant="shadow"
+                  >
+                    End session
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-col gap-2 w-full">
-                <p className="text-sm font-medium leading-none">
-                  Custom Voice ID (optional)
-                </p>
-                <Input
-                  value={voiceId}
-                  onChange={(e) => setVoiceId(e.target.value)}
-                  placeholder="Enter a custom voice ID"
-                />
-                <Select
-                  placeholder="Or select one from these example voices"
+            ) : !isLoadingSession ? (
+              <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center">
+                <div className="flex flex-col gap-2 w-full">
+                  <p className="text-sm font-medium leading-none">
+                    Custom Avatar ID (optional)
+                  </p>
+                  <Input
+                    value={avatarId}
+                    onChange={(e) => setAvatarId(e.target.value)}
+                    placeholder="Enter a custom avatar ID"
+                  />
+                  <Select
+                    placeholder="Or select one from these example avatars"
+                    size="md"
+                    onChange={(e) => {
+                      setAvatarId(e.target.value);
+                    }}
+                  >
+                    {AVATARS.map((avatar) => (
+                      <SelectItem
+                        key={avatar.avatar_id}
+                        textValue={avatar.avatar_id}
+                      >
+                        {avatar.name}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2 w-full">
+                  <p className="text-sm font-medium leading-none">
+                    Custom Voice ID (optional)
+                  </p>
+                  <Input
+                    value={voiceId}
+                    onChange={(e) => setVoiceId(e.target.value)}
+                    placeholder="Enter a custom voice ID"
+                  />
+                  <Select
+                    placeholder="Or select one from these example voices"
+                    size="md"
+                    onChange={(e) => {
+                      setVoiceId(e.target.value);
+                    }}
+                  >
+                    {VOICES.map((voice) => (
+                      <SelectItem key={voice.voice_id} textValue={voice.voice_id}>
+                        {voice.name} | {voice.language} | {voice.gender}
+                      </SelectItem>
+                    ))}
+                  </Select>
+                </div>
+                <Button
                   size="md"
-                  onChange={(e) => {
-                    setVoiceId(e.target.value);
-                  }}
+                  onClick={startSession}
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
+                  variant="shadow"
                 >
-                  {VOICES.map((voice) => (
-                    <SelectItem key={voice.voice_id} textValue={voice.voice_id}>
-                      {voice.name} | {voice.language} | {voice.gender}
-                    </SelectItem>
-                  ))}
-                </Select>
+                  Start session
+                </Button>
               </div>
-              <Button
-                size="md"
-                onClick={startSession}
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
-                variant="shadow"
-              >
-                Start session
-              </Button>
-            </div>
-          ) : (
-            <Spinner size="lg" color="default" />
-          )}
-        </CardBody>
-        <Divider />
-        <CardFooter className="flex flex-col gap-3">
-          <InteractiveAvatarTextInput
-            label="Repeat"
-            placeholder="Type something for the avatar to repeat"
-            input={text}
-            onSubmit={handleSpeak}
-            setInput={setText}
-            disabled={!stream}
-            loading={isLoadingRepeat}
-          />
-          <InteractiveAvatarTextInput
-            label="Chat"
-            placeholder="Chat with the avatar (uses ChatGPT)"
-            input={input}
-            onSubmit={() => {
-              setIsLoadingChat(true);
-              if (!input) {
-                setDebug("Please enter text to send to ChatGPT");
-                return;
+            ) : (
+              <Spinner size="lg" color="default" />
+            )}
+          </CardBody>
+          <Divider />
+          <CardFooter className="flex flex-col gap-3">
+            <InteractiveAvatarTextInput
+              label="Repeat"
+              placeholder="Type something for the avatar to repeat"
+              input={text}
+              onSubmit={handleSpeak}
+              setInput={setText}
+              disabled={!stream}
+              loading={isLoadingRepeat}
+            />
+            <InteractiveAvatarTextInput
+              label="Chat"
+              placeholder="Chat with the avatar (uses ChatGPT)"
+              input={input}
+              onSubmit={() => {
+                setIsLoadingChat(true);
+                if (!input) {
+                  setDebug("Please enter text to send to ChatGPT");
+                  return;
+                }
+                handleSubmit();
+              }}
+              setInput={setInput}
+              loading={isLoadingChat}
+              endContent={
+                <Tooltip
+                  content={!recording ? "Start recording" : "Stop recording"}
+                >
+                  <Button
+                    onClick={!recording ? startRecording : stopRecording}
+                    isDisabled={!stream}
+                    isIconOnly
+                    className={clsx(
+                      "mr-4 text-white",
+                      !recording
+                        ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
+                        : ""
+                    )}
+                    size="sm"
+                    variant="shadow"
+                  >
+                    {!recording ? (
+                      <Microphone size={20} />
+                    ) : (
+                      <>
+                        <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
+                        <MicrophoneStage size={20} />
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
               }
-              handleSubmit();
-            }}
-            setInput={setInput}
-            loading={isLoadingChat}
-            endContent={
-              <Tooltip
-                content={!recording ? "Start recording" : "Stop recording"}
-              >
-                <Button
-                  onClick={!recording ? startRecording : stopRecording}
-                  isDisabled={!stream}
-                  isIconOnly
-                  className={clsx(
-                    "mr-4 text-white",
-                    !recording
-                      ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
-                      : ""
-                  )}
-                  size="sm"
-                  variant="shadow"
-                >
-                  {!recording ? (
-                    <Microphone size={20} />
-                  ) : (
-                    <>
-                      <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
-                      <MicrophoneStage size={20} />
-                    </>
-                  )}
-                </Button>
-              </Tooltip>
-            }
-            disabled={!stream}
-          />
-        </CardFooter>
-      </Card>
-      <p className="font-mono text-right">
-        <span className="font-bold">Console:</span>
-        <br />
-        {debug}
-      </p>
-    </div>
-  );
+              disabled={!stream}
+            />
+          </CardFooter>
+        </Card>
+        <p className="font-mono text-right">
+          <span className="font-bold">Console:</span>
+          <br />
+          {debug}
+        </p>
+      </div>
+    );
 }
+
