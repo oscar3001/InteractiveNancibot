@@ -115,7 +115,7 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
+        There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}
       );
     }
     setIsLoadingSession(false);
@@ -301,7 +301,7 @@ export default function InteractiveAvatar() {
   }
 
   return (
-    <div className="w-full flex flex-col gap-4" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div className="w-full flex flex-col gap-4">
       <Card>
         <CardBody className="h-[500px] flex flex-col justify-center items-center">
           {stream ? (
@@ -338,7 +338,7 @@ export default function InteractiveAvatar() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center">
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: url(${BACKGROUND_IMAGE_URL}), backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <Button
                 size="md"
                 onClick={startSession}
