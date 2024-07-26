@@ -33,13 +33,12 @@ export default function InteractiveAvatar() {
   const [voiceId, setVoiceId] = useState<string>("");
   const [data, setData] = useState<NewSessionData>();
   const [text, setText] = useState<string>("");
-  const [initialized, setInitialized] = useState(false); // Track initialization
-  const [recording, setRecording] = useState(false); // Track recording state
-  const [shouldSubmit, setShouldSubmit] = useState(false); // Track whether to submit
+  const [initialized, setInitialized] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [shouldSubmit, setShouldSubmit] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -49,7 +48,6 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      //send the ChatGPT response to the Interactive Avatar
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -67,6 +65,19 @@ export default function InteractiveAvatar() {
       },
     ],
   });
+
+  useEffect(() => {
+    if (shouldSubmit) {
+      console.log("Conditions met, submitting...");
+      setIsLoadingChat(true);
+      if (!input) {
+        setDebug("Please enter text to send to ChatGPT");
+        return;
+      }
+      handleSubmit();
+      setShouldSubmit(false); // Reset the flag
+    }
+  }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
 
   async function fetchAccessToken() {
     try {
@@ -197,15 +208,6 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
-  useEffect(() => {
-    if (shouldSubmit) {
-      console.log("Submitting message to OpenAI.");
-      setIsLoadingChat(true);
-      handleSubmit();
-      setShouldSubmit(false); // Reset the flag after submission
-    }
-  }, [shouldSubmit]);
-
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
@@ -249,8 +251,7 @@ export default function InteractiveAvatar() {
               console.log("First condition met: Input contains text.");
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: Two consecutive empty transcriptions.");
-                setShouldSubmit(true);
-                console.log("handleSubmit flagged for execution.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
               }
             }
 
@@ -299,6 +300,7 @@ export default function InteractiveAvatar() {
     }
     return false;
   }
+
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
