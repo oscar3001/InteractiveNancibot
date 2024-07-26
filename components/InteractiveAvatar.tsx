@@ -19,14 +19,9 @@ import {
 import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
-import OpenAI from "openai";
+import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -38,12 +33,11 @@ export default function InteractiveAvatar() {
   const [voiceId, setVoiceId] = useState<string>("");
   const [data, setData] = useState<NewSessionData>();
   const [text, setText] = useState<string>("");
-  const [initialized, setInitialized] = useState(false); // Track initialization
-  const [recording, setRecording] = useState(false); // Track recording state
+  const [initialized, setInitialized] = useState(false);
+  const [recording, setRecording] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -53,7 +47,6 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      //send the ChatGPT response to the Interactive Avatar
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -71,7 +64,6 @@ export default function InteractiveAvatar() {
       },
     ],
   });
-
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -200,23 +192,44 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
+
   function startRecording() {
+    const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
+    const deepgram = createClient(deepgramApiKey);
+
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
         mediaRecorder.current = new MediaRecorder(stream);
-        mediaRecorder.current.ondataavailable = (event) => {
-          audioChunks.current.push(event.data);
-        };
-        mediaRecorder.current.onstop = () => {
-          const audioBlob = new Blob(audioChunks.current, {
-            type: "audio/wav",
-          });
-          audioChunks.current = [];
-          transcribeAudio(audioBlob);
-        };
-        mediaRecorder.current.start();
-        setRecording(true);
+        const connection = deepgram.listen.live({
+          punctuate: true,
+          model: 'nova-2',
+          language: 'es',
+        });
+
+        connection.on(LiveTranscriptionEvents.Open, () => {
+          console.log("Deepgram connection opened.");
+          mediaRecorder.current!.ondataavailable = (event) => {
+            connection.send(event.data);
+          };
+          mediaRecorder.current!.onstop = () => {
+            connection.finish();
+            console.log("Deepgram connection closed.");
+            setRecording(false);
+          };
+          mediaRecorder.current!.start(100);
+          setRecording(true);
+        });
+
+        connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+          const transcription = data.channel.alternatives[0].transcript;
+          console.log("Transcription: ", transcription);
+          setInput(transcription);
+        });
+
+        connection.on(LiveTranscriptionEvents.Error, (error) => {
+          console.error("Deepgram error: ", error);
+        });
       })
       .catch((error) => {
         console.error("Error accessing microphone:", error);
@@ -229,25 +242,6 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
-
-  async function transcribeAudio(audioBlob: Blob) {
-    try {
-      // Convert Blob to File
-      const audioFile = new File([audioBlob], "recording.wav", {
-        type: "audio/wav",
-      });
-      const response = await openai.audio.transcriptions.create({
-        model: "whisper-1",
-        file: audioFile,
-      });
-      const transcription = response.text;
-      console.log("Transcription: ", transcription);
-      setInput(transcription);
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-    }
-  }
-
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
@@ -278,7 +272,7 @@ export default function InteractiveAvatar() {
                 <Button
                   size="md"
                   onClick={endSession}
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300  text-white rounded-lg"
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
                   End session
