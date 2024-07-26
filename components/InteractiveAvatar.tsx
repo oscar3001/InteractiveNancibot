@@ -109,7 +109,7 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        There was an error starting the session. ${voiceId ? "This custom voice ID may not be supported." : ""}
+        `There was an error starting the session. ${voiceId ? "This custom voice ID may not be supported." : ""}`
       );
     }
     setIsLoadingSession(false);
@@ -200,8 +200,6 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
-
-
   function startRecording() {
     navigator.mediaDevices
       .getUserMedia({ audio: true })
