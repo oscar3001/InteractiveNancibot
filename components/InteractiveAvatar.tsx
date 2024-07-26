@@ -222,9 +222,9 @@ export default function InteractiveAvatar() {
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const transcription = data.channel.alternatives[0].transcript;
-          console.log("Transcription: ", transcription);
-          setInput(transcription);
+          const newTranscription = data.channel.alternatives[0].transcript;
+          console.log("Transcription: ", newTranscription);
+          setInput((prevInput) => prevInput + " " + newTranscription);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -242,6 +242,9 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
+
+
+
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
