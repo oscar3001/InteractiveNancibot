@@ -64,6 +64,7 @@ export default function InteractiveAvatar() {
       },
     ],
   });
+
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -193,12 +194,6 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
-  
-
-
-
-
-
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
@@ -208,7 +203,6 @@ export default function InteractiveAvatar() {
       .then((stream) => {
         mediaRecorder.current = new MediaRecorder(stream);
         let emptyCount = 0;
-        let accumulatedTranscription = "";
         const connection = deepgram.listen.live({
           punctuate: true,
           model: 'nova-2',
@@ -233,19 +227,20 @@ export default function InteractiveAvatar() {
           const newTranscription = data.channel.alternatives[0].transcript.trim();
           console.log("Transcription: ", newTranscription);
 
-          if (newTranscription === "") {
+          if (newTranscription === "" || newTranscription === " ") {
             emptyCount++;
           } else {
             emptyCount = 0; // Reset count if we get non-empty transcription
-            accumulatedTranscription += " " + newTranscription;
-            setInput(accumulatedTranscription.trim());
           }
 
-          if (emptyCount === 2 && accumulatedTranscription.trim() !== "") {
-            console.log("Two consecutive empty transcriptions detected with non-empty accumulated transcription.");
+          if (emptyCount < 2) {
+            setInput((prevInput) => prevInput + " " + newTranscription);
+          }
+
+          if (emptyCount === 2 && input.trim().length > 0) {
+            console.log("Two consecutive empty transcriptions detected.");
             handleSubmit();
             setInput(""); // Clear the input after submitting
-            accumulatedTranscription = ""; // Clear the accumulated transcription
             emptyCount = 0; // Reset the count
           }
         });
@@ -265,13 +260,6 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
-
-
-
-
-
-
-
 
   return (
     <div className="w-full flex flex-col gap-4">
@@ -391,8 +379,9 @@ export default function InteractiveAvatar() {
             input={input}
             onSubmit={() => {
               setIsLoadingChat(true);
-              if (!input) {
+              if (!input.trim()) {
                 setDebug("Please enter text to send to ChatGPT");
+                setIsLoadingChat(false);
                 return;
               }
               handleSubmit();
