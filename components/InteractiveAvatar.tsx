@@ -339,11 +339,11 @@ export default function InteractiveAvatar() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }}>
               <Button
                 size="md"
                 onClick={startSession}
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
                 Llamar a Nancy Bot
