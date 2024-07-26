@@ -22,9 +22,9 @@ import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
 const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg "; // Reemplaza con la URL de tu imagen
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
 
-export default function Nancibot() {
+export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
@@ -112,6 +112,7 @@ export default function Nancibot() {
       );
       setData(res);
       setStream(avatar.current.mediaStream);
+      startRecording(); // Iniciar la grabación al iniciar la sesión
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
