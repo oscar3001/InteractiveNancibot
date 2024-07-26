@@ -224,16 +224,20 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          console.log("Transcription: ", newTranscription);
+          console.log("Received transcription: ", newTranscription);
 
           // Concatenate transcription
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
+            console.log("Updated input: ", updatedInput);
 
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
+              console.log("First condition met: Input contains text.");
               if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: Two consecutive empty transcriptions.");
                 handleSubmit();
+                console.log("handleSubmit called.");
               }
             }
 
@@ -260,7 +264,9 @@ export default function InteractiveAvatar() {
   // Function to check if input contains any text or numbers
   function checkForText(input) {
     const regex = /\S/;
-    return regex.test(input);
+    const result = regex.test(input);
+    console.log("Checking for text in input: ", input, " Result: ", result);
+    return result;
   }
 
   // Variable to keep track of consecutive empty transcriptions
@@ -270,6 +276,7 @@ export default function InteractiveAvatar() {
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
+      console.log("Empty transcription received. Empty count: ", emptyCount);
       if (emptyCount >= 2) {
         emptyCount = 0;  // reset counter
         return true;
