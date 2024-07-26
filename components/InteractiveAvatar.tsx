@@ -355,62 +355,66 @@ export default function InteractiveAvatar() {
         </CardBody>
         <Divider />
         <CardFooter className="flex flex-col gap-3">
-          <InteractiveAvatarTextInput
-            label="Repeat"
-            placeholder="Inggrese mensaje que se va a repetir"
-            input={text}
-            onSubmit={handleSpeak}
-            setInput={setText}
-            disabled={!stream}
-            loading={isLoadingRepeat}
-          />
-          <InteractiveAvatarTextInput
-            label="Chat"
-            placeholder="Escribe mensaje al avatar"
-            input={input}
-            onSubmit={() => {
-              setIsLoadingChat(true);
-              if (!input) {
-                setDebug("Escribe mensaje al avatar");
-                return;
-              }
-              handleSubmit();
-            }}
-            setInput={setInput}
-            loading={isLoadingChat}
-            endContent={
-              <Tooltip
-                content={!recording ? "Inicio Escucha" : "Detener Escucha"}
-              >
-                <Button
-                  onClick={!recording ? startRecording : stopRecording}
-                  isDisabled={!stream}
-                  isIconOnly
-                  className={clsx(
-                    "mr-4 text-white",
-                    !recording
-                      ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
-                      : ""
-                  )}
-                  size="sm"
-                  variant="shadow"
+          <div className="hidden">
+            <InteractiveAvatarTextInput
+              label="Repeat"
+              placeholder="Inggrese mensaje que se va a repetir"
+              input={text}
+              onSubmit={handleSpeak}
+              setInput={setText}
+              disabled={!stream}
+              loading={isLoadingRepeat}
+            />
+          </div>
+          <div className="hidden">
+            <InteractiveAvatarTextInput
+              label="Chat"
+              placeholder="Escribe mensaje al avatar"
+              input={input}
+              onSubmit={() => {
+                setIsLoadingChat(true);
+                if (!input) {
+                  setDebug("Escribe mensaje al avatar");
+                  return;
+                }
+                handleSubmit();
+              }}
+              setInput={setInput}
+              loading={isLoadingChat}
+              endContent={
+                <Tooltip
+                  content={!recording ? "Inicio Escucha" : "Detener Escucha"}
                 >
-                  {!recording ? (
-                    <Microphone size={20} />
-                  ) : (
-                    <>
-                      <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
-                      <MicrophoneStage size={20} />
-                    </>
-                  )}
-                </Button>
-              </Tooltip>
-            }
-            disabled={!stream}
-          />
+                  <Button
+                    onClick={!recording ? startRecording : stopRecording}
+                    isDisabled={!stream}
+                    isIconOnly
+                    className={clsx(
+                      "mr-4 text-white",
+                      !recording
+                        ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
+                        : ""
+                    )}
+                    size="sm"
+                    variant="shadow"
+                  >
+                    {!recording ? (
+                      <Microphone size={20} />
+                    ) : (
+                      <>
+                        <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
+                        <MicrophoneStage size={20} />
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
+              }
+              disabled={!stream}
+            />
+          </div>
         </CardFooter>
       </Card>
-      <p className="font-mono text-right">
+      <p className="font-mono text-right hidden">
         <span className="font-bold">Console:</span>
         <br />
         {debug}
