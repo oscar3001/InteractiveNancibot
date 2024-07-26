@@ -64,7 +64,6 @@ export default function InteractiveAvatar() {
       },
     ],
   });
-
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -194,6 +193,18 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
+
+
+
+
+
+
+
+
+
+
+
+  
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
@@ -202,7 +213,6 @@ export default function InteractiveAvatar() {
       .getUserMedia({ audio: true })
       .then((stream) => {
         mediaRecorder.current = new MediaRecorder(stream);
-        let emptyCount = 0;
         const connection = deepgram.listen.live({
           punctuate: true,
           model: 'nova-2',
@@ -224,25 +234,9 @@ export default function InteractiveAvatar() {
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const newTranscription = data.channel.alternatives[0].transcript.trim();
+          const transcription = data.channel.alternatives[0].transcript;
           console.log("Transcription: ", newTranscription);
-
-          if (newTranscription === "" || newTranscription === " ") {
-            emptyCount++;
-          } else {
-            emptyCount = 0; // Reset count if we get non-empty transcription
-          }
-
-          if (emptyCount < 2) {
-            setInput((prevInput) => prevInput + " " + newTranscription);
-          }
-
-          if (emptyCount === 2 && input.trim().length > 0) {
-            console.log("Two consecutive empty transcriptions detected.");
-            handleSubmit();
-            setInput(""); // Clear the input after submitting
-            emptyCount = 0; // Reset the count
-          }
+          setInput((prevInput) => prevInput + newTranscription);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -260,7 +254,7 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
-
+  
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
@@ -379,9 +373,8 @@ export default function InteractiveAvatar() {
             input={input}
             onSubmit={() => {
               setIsLoadingChat(true);
-              if (!input.trim()) {
+              if (!input) {
                 setDebug("Please enter text to send to ChatGPT");
-                setIsLoadingChat(false);
                 return;
               }
               handleSubmit();
