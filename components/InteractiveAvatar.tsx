@@ -19,11 +19,11 @@ import {
 import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
-import { Deepgram } from "@deepgram/sdk";
+import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEEPGRAM_API_KEY = "aeea1334bf142235e1f53360341cf4bb0afe1bae"; // Reemplaza con tu clave de API de Deepgram
+const DEEPGRAM_API_KEY = "YOUR_DEEPGRAM_API_KEY"; // Reemplaza con tu clave de API de Deepgram
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -39,8 +39,6 @@ export default function InteractiveAvatar() {
   const [recording, setRecording] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
   const transcribing = useRef<boolean>(false);
   const lastTranscriptionTime = useRef<number>(Date.now());
   const intervalId = useRef<NodeJS.Timeout | null>(null);
@@ -54,7 +52,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      //send the ChatGPT response to the Interactive Avatar
+      // Enviar la respuesta de ChatGPT al avatar interactivo
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -203,12 +201,14 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
+
+  // Función para iniciar la grabación y transcripción en tiempo real con Deepgram
   async function startRecording() {
     if (transcribing.current) return;
     transcribing.current = true;
 
     // Crear cliente Deepgram
-    const deepgram = new Deepgram(DEEPGRAM_API_KEY);
+    const deepgram = createClient(DEEPGRAM_API_KEY);
     const connection = deepgram.transcription.live({
       punctuate: true,
       model: "nova-2",
@@ -216,7 +216,7 @@ export default function InteractiveAvatar() {
     });
 
     // Manejar transcripción en tiempo real
-    connection.addListener("transcriptReceived", (data) => {
+    connection.on(LiveTranscriptionEvents.Transcript, (data) => {
       if (data.channel.alternatives[0].transcript) {
         console.log("Transcription: ", data.channel.alternatives[0].transcript);
         setInput(data.channel.alternatives[0].transcript);
@@ -225,7 +225,7 @@ export default function InteractiveAvatar() {
     });
 
     // Manejar apertura de conexión
-    connection.addListener("open", () => {
+    connection.on(LiveTranscriptionEvents.Open, () => {
       console.log("Connection opened.");
       navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
         const mediaRecorder = new MediaRecorder(stream);
@@ -245,7 +245,7 @@ export default function InteractiveAvatar() {
     });
 
     // Manejar cierre de conexión
-    connection.addListener("close", () => {
+    connection.on(LiveTranscriptionEvents.Close, () => {
       console.log("Connection closed.");
       if (intervalId.current) {
         clearInterval(intervalId.current);
@@ -265,6 +265,7 @@ export default function InteractiveAvatar() {
     }, 1000);
   }
 
+  // Función para detener la grabación
   function stopRecording() {
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
@@ -278,7 +279,7 @@ export default function InteractiveAvatar() {
         <CardBody className="h-[500px] flex flex-col justify-center items-center">
           {stream ? (
             <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
-              <video
+                            <video
                 ref={mediaStream}
                 autoPlay
                 playsInline
