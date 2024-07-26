@@ -20,9 +20,9 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "your_default_avatar_id"; // Reemplaza con el ID por defecto
-const DEFAULT_VOICE_ID = "your_default_voice_id"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://your-image-url.com"; // Reemplaza con la URL de tu imagen
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg "; // Reemplaza con la URL de tu imagen
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -60,7 +60,7 @@ export default function InteractiveAvatar() {
       {
         id: "1",
         role: "system",
-        content: "You are a helpful assistant.",
+        content: "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
       },
     ],
   });
@@ -70,7 +70,7 @@ export default function InteractiveAvatar() {
       console.log("Conditions met, submitting...");
       setIsLoadingChat(true);
       if (!input) {
-        setDebug("Please enter text to send to ChatGPT");
+        setDebug("ingrese el mensaje a enviar");
         return;
       }
       handleSubmit();
@@ -356,7 +356,7 @@ export default function InteractiveAvatar() {
         <CardFooter className="flex flex-col gap-3">
           <InteractiveAvatarTextInput
             label="Repeat"
-            placeholder="Type something for the avatar to repeat"
+            placeholder="Inggrese mensaje que se va a repetir"
             input={text}
             onSubmit={handleSpeak}
             setInput={setText}
@@ -365,12 +365,12 @@ export default function InteractiveAvatar() {
           />
           <InteractiveAvatarTextInput
             label="Chat"
-            placeholder="Chat with the avatar (uses ChatGPT)"
+            placeholder="Escribe mensaje al avatar"
             input={input}
             onSubmit={() => {
               setIsLoadingChat(true);
               if (!input) {
-                setDebug("Please enter text to send to ChatGPT");
+                setDebug("Escribe mensaje al avatar");
                 return;
               }
               handleSubmit();
@@ -379,7 +379,7 @@ export default function InteractiveAvatar() {
             loading={isLoadingChat}
             endContent={
               <Tooltip
-                content={!recording ? "Start recording" : "Stop recording"}
+                content={!recording ? "Inicio Escucha" : "Detener Escucha"}
               >
                 <Button
                   onClick={!recording ? startRecording : stopRecording}
