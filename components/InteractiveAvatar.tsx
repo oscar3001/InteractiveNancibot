@@ -291,7 +291,7 @@ export default function InteractiveAvatar() {
     if (newTranscription.trim() === "") {
       emptyCount++;
       console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 2) {
+      if (emptyCount >= 1) {
         emptyCount = 0;  // reset counter
         return true;
       }
