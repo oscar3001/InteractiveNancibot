@@ -193,6 +193,12 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
+  
+
+
+
+
+
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
@@ -201,6 +207,7 @@ export default function InteractiveAvatar() {
       .getUserMedia({ audio: true })
       .then((stream) => {
         mediaRecorder.current = new MediaRecorder(stream);
+        let emptyCount = 0;
         const connection = deepgram.listen.live({
           punctuate: true,
           model: 'nova-2',
@@ -222,9 +229,22 @@ export default function InteractiveAvatar() {
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const newTranscription = data.channel.alternatives[0].transcript;
+          const newTranscription = data.channel.alternatives[0].transcript.trim();
           console.log("Transcription: ", newTranscription);
-          setInput((prevInput) => prevInput + " " + newTranscription);
+
+          if (newTranscription === "") {
+            emptyCount++;
+          } else {
+            emptyCount = 0; // Reset count if we get non-empty transcription
+            setInput((prevInput) => prevInput + " " + newTranscription);
+          }
+
+          if (emptyCount === 2 && input.trim() !== "") {
+            console.log("Two consecutive empty transcriptions detected.");
+            handleSubmit();
+            setInput(""); // Clear the input after submitting
+            emptyCount = 0; // Reset the count
+          }
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -242,6 +262,10 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
+
+
+
+
 
 
 
