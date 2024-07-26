@@ -208,6 +208,7 @@ export default function InteractiveAvatar() {
       .then((stream) => {
         mediaRecorder.current = new MediaRecorder(stream);
         let emptyCount = 0;
+        let accumulatedTranscription = "";
         const connection = deepgram.listen.live({
           punctuate: true,
           model: 'nova-2',
@@ -236,13 +237,15 @@ export default function InteractiveAvatar() {
             emptyCount++;
           } else {
             emptyCount = 0; // Reset count if we get non-empty transcription
-            setInput((prevInput) => prevInput + " " + newTranscription);
+            accumulatedTranscription += " " + newTranscription;
+            setInput(accumulatedTranscription.trim());
           }
 
-          if (emptyCount === 2 && input.trim() !== "") {
-            console.log("Two consecutive empty transcriptions detected.");
+          if (emptyCount === 2 && accumulatedTranscription.trim() !== "") {
+            console.log("Two consecutive empty transcriptions detected with non-empty accumulated transcription.");
             handleSubmit();
             setInput(""); // Clear the input after submitting
+            accumulatedTranscription = ""; // Clear the accumulated transcription
             emptyCount = 0; // Reset the count
           }
         });
@@ -262,6 +265,7 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
+
 
 
 
