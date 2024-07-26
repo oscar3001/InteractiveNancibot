@@ -231,8 +231,10 @@ export default function InteractiveAvatar() {
             const updatedInput = prevInput + " " + newTranscription;
 
             // Check conditions for handleSubmit
-            if (checkForText(updatedInput) && checkForConsecutiveEmpty(newTranscription)) {
-              handleSubmit();
+            if (checkForText(updatedInput)) {
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                handleSubmit();
+              }
             }
 
             return updatedInput;
@@ -261,10 +263,11 @@ export default function InteractiveAvatar() {
     return regex.test(input);
   }
 
+  // Variable to keep track of consecutive empty transcriptions
+  let emptyCount = 0;
+
   // Function to check for two consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
-    static let emptyCount = 0;
-
     if (newTranscription.trim() === "") {
       emptyCount++;
       if (emptyCount >= 2) {
