@@ -60,7 +60,7 @@ export default function InteractiveAvatar() {
       {
         id: "1",
         role: "system",
-        content: "You are a helpful assistant.",
+        content: "Eres Nanci bot un avatar experto sommelier en vinos, estas en una videollamada asi que responde de manera muy breve y amigable y graciosa. responderas todas las preguntas del usuario de manera muy breve y asle preguntas al usuario para conocer mas sus gustos y hacer la conversacion mas fluida.",
       },
     ],
   });
@@ -70,7 +70,7 @@ export default function InteractiveAvatar() {
       console.log("Conditions met, submitting...");
       setIsLoadingChat(true);
       if (!input) {
-        setDebug("Please enter text to send to ChatGPT");
+        setDebug("Engresa el mensaje escrito");
         return;
       }
       handleSubmit();
@@ -356,7 +356,7 @@ export default function InteractiveAvatar() {
         <CardFooter className="flex flex-col gap-3">
           <InteractiveAvatarTextInput
             label="Repeat"
-            placeholder="Type something for the avatar to repeat"
+            placeholder="escribe que quieras que repita el avatar"
             input={text}
             onSubmit={handleSpeak}
             setInput={setText}
