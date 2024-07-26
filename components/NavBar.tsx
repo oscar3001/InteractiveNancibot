@@ -12,7 +12,7 @@ import { ThemeSwitch } from "./ThemeSwitch";
 
 export default function NavBar() {
   return (
-    <Navbar className="w-full">
+    <Navbar className="w-full hidden sr-only">
       <NavbarBrand>
         <Link isExternal aria-label="HeyGen" href="https://app.heygen.com/">
           <HeyGenLogo />
