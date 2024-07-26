@@ -193,18 +193,6 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
-
-
-
-
-
-
-
-
-
-
-
-  
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
@@ -234,9 +222,9 @@ export default function InteractiveAvatar() {
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-          const transcription = data.channel.alternatives[0].transcript;
+          const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Transcription: ", newTranscription);
-          setInput((prevInput) => prevInput + newTranscription);
+          setInput((prevInput) => prevInput + " " + newTranscription);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -254,7 +242,6 @@ export default function InteractiveAvatar() {
       setRecording(false);
     }
   }
-  
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
