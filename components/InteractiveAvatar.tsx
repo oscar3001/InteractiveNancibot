@@ -10,9 +10,6 @@ import {
   CardBody,
   CardFooter,
   Divider,
-  Input,
-  Select,
-  SelectItem,
   Spinner,
   Tooltip,
 } from "@nextui-org/react";
@@ -23,14 +20,16 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
+
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
-  const [avatarId, setAvatarId] = useState<string>("");
-  const [voiceId, setVoiceId] = useState<string>("");
   const [data, setData] = useState<NewSessionData>();
   const [text, setText] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
@@ -105,8 +104,8 @@ export default function InteractiveAvatar() {
         {
           newSessionRequest: {
             quality: "low",
-            avatarName: avatarId,
-            voice: { voiceId: voiceId },
+            avatarName: DEFAULT_AVATAR_ID,
+            voice: { voiceId: DEFAULT_VOICE_ID },
           },
         },
         setDebug
@@ -116,7 +115,7 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${voiceId ? "This custom voice ID may not be supported." : ""}`
+        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
       );
     }
     setIsLoadingSession(false);
@@ -339,63 +338,14 @@ export default function InteractiveAvatar() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center">
-              <div className="flex flex-col gap-2 w-full">
-                <p className="text-sm font-medium leading-none">
-                  Custom Avatar ID (optional)
-                </p>
-                <Input
-                  value={avatarId}
-                  onChange={(e) => setAvatarId(e.target.value)}
-                  placeholder="Enter a custom avatar ID"
-                />
-                <Select
-                  placeholder="Or select one from these example avatars"
-                  size="md"
-                  onChange={(e) => {
-                    setAvatarId(e.target.value);
-                  }}
-                >
-                  {AVATARS.map((avatar) => (
-                    <SelectItem
-                      key={avatar.avatar_id}
-                      textValue={avatar.avatar_id}
-                    >
-                      {avatar.name}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2 w-full">
-                <p className="text-sm font-medium leading-none">
-                  Custom Voice ID (optional)
-                </p>
-                <Input
-                  value={voiceId}
-                  onChange={(e) => setVoiceId(e.target.value)}
-                  placeholder="Enter a custom voice ID"
-                />
-                <Select
-                  placeholder="Or select one from these example voices"
-                  size="md"
-                  onChange={(e) => {
-                    setVoiceId(e.target.value);
-                  }}
-                >
-                  {VOICES.map((voice) => (
-                    <SelectItem key={voice.voice_id} textValue={voice.voice_id}>
-                      {voice.name} | {voice.language} | {voice.gender}
-                    </SelectItem>
-                  ))}
-                </Select>
-              </div>
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
               <Button
                 size="md"
                 onClick={startSession}
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
                 variant="shadow"
               >
-                Start session
+                Llamar a Nancy Bot
               </Button>
             </div>
           ) : (
