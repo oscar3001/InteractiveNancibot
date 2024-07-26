@@ -236,6 +236,7 @@ export default function InteractiveAvatar() {
               console.log("First condition met: Input contains text.");
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: Two consecutive empty transcriptions.");
+                console.log("handleSubmit about to be called.");
                 handleSubmit();
                 console.log("handleSubmit called.");
               }
@@ -286,7 +287,6 @@ export default function InteractiveAvatar() {
     }
     return false;
   }
-
   return (
     <div className="w-full flex flex-col gap-4">
       <Card>
