@@ -196,6 +196,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
+    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -224,7 +225,18 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Transcription: ", newTranscription);
-          setInput((prevInput) => prevInput + " " + newTranscription);
+
+          // Concatenate transcription
+          setInput((prevInput) => {
+            const updatedInput = prevInput + " " + newTranscription;
+
+            // Check conditions for handleSubmit
+            if (checkForText(updatedInput) && checkForConsecutiveEmpty(newTranscription)) {
+              handleSubmit();
+            }
+
+            return updatedInput;
+          });
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -241,6 +253,28 @@ export default function InteractiveAvatar() {
       mediaRecorder.current.stop();
       setRecording(false);
     }
+  }
+
+  // Function to check if input contains any text or numbers
+  function checkForText(input) {
+    const regex = /\S/;
+    return regex.test(input);
+  }
+
+  // Function to check for two consecutive empty transcriptions
+  function checkForConsecutiveEmpty(newTranscription) {
+    static let emptyCount = 0;
+
+    if (newTranscription.trim() === "") {
+      emptyCount++;
+      if (emptyCount >= 2) {
+        emptyCount = 0;  // reset counter
+        return true;
+      }
+    } else {
+      emptyCount = 0;  // reset counter
+    }
+    return false;
   }
   return (
     <div className="w-full flex flex-col gap-4">
