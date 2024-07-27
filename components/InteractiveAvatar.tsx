@@ -144,22 +144,17 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
-async function handleInterrupt() {
-  if (!initialized || !avatar.current) {
-    setDebug("Avatar API not initialized");
-    return;
+  async function handleInterrupt() {
+    if (!initialized || !avatar.current) {
+      setDebug("Avatar API not initialized");
+      return;
+    }
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
+      });
   }
-
-  // Actualizar el token antes de interrumpir
-  await updateToken();
-
-  await avatar.current
-    .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-    .catch((e) => {
-      setDebug(e.message);
-    });
-}
-
 
   async function endSession() {
     if (!initialized || !avatar.current) {
@@ -213,67 +208,65 @@ async function handleInterrupt() {
     }
   }, [mediaStream, stream]);
 
-function startRecording() {
-  const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
-  const deepgram = createClient(deepgramApiKey);
-  let emptyTranscriptionCount = 0;
+  function startRecording() {
+    const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
+    const deepgram = createClient(deepgramApiKey);
+    let emptyTranscriptionCount = 0;
 
-  navigator.mediaDevices
-    .getUserMedia({ audio: true })
-    .then((stream) => {
-      mediaRecorder.current = new MediaRecorder(stream);
-      const connection = deepgram.listen.live({
-        punctuate: true,
-        model: 'nova-2',
-        language: 'es',
-      });
-
-      connection.on(LiveTranscriptionEvents.Open, () => {
-        console.log("Deepgram connection opened.");
-        mediaRecorder.current!.ondataavailable = (event) => {
-          connection.send(event.data);
-        };
-        mediaRecorder.current!.onstop = () => {
-          connection.finish();
-          console.log("Deepgram connection closed.");
-          setRecording(false);
-        };
-        mediaRecorder.current!.start(100);
-        setRecording(true);
-      });
-
-      connection.on(LiveTranscriptionEvents.Transcript, (data) => {
-        const newTranscription = data.channel.alternatives[0].transcript;
-        console.log("Received transcription: ", newTranscription);
-
-        // Concatenate transcription
-        setInput((prevInput) => {
-          const updatedInput = prevInput + " " + newTranscription;
-          console.log("Updated input: ", updatedInput);
-
-          // Check conditions for handleSubmit
-          if (checkForText(updatedInput)) {
-            console.log("First condition met: Input contains text.");
-            handleInterrupt(); // Execute handleInterrupt
-            if (checkForConsecutiveEmpty(newTranscription)) {
-              console.log("Second condition met: consecutive empty transcriptions.");
-              setShouldSubmit(true); // Trigger the useEffect to handle submit
-            }
-          }
-
-          return updatedInput;
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        mediaRecorder.current = new MediaRecorder(stream);
+        const connection = deepgram.listen.live({
+          punctuate: true,
+          model: 'nova-2',
+          language: 'es',
         });
-      });
 
-      connection.on(LiveTranscriptionEvents.Error, (error) => {
-        console.error("Deepgram error: ", error);
-      });
-    })
-    .catch((error) => {
-      console.error("Error accessing microphone:", error);
-    });
-}
+        connection.on(LiveTranscriptionEvents.Open, () => {
+          console.log("Deepgram connection opened.");
+          mediaRecorder.current!.ondataavailable = (event) => {
+            connection.send(event.data);
+          };
+          mediaRecorder.current!.onstop = () => {
+            connection.finish();
+            console.log("Deepgram connection closed.");
+            setRecording(false);
+          };
+          mediaRecorder.current!.start(100);
+          setRecording(true);
+        });
 
+        connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+          const newTranscription = data.channel.alternatives[0].transcript;
+          console.log("Received transcription: ", newTranscription);
+
+          // Concatenate transcription
+          setInput((prevInput) => {
+            const updatedInput = prevInput + " " + newTranscription;
+            console.log("Updated input: ", updatedInput);
+
+            // Check conditions for handleSubmit
+            if (checkForText(updatedInput)) {
+              console.log("First condition met: Input contains text.");
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
+              }
+            }
+
+            return updatedInput;
+          });
+        });
+
+        connection.on(LiveTranscriptionEvents.Error, (error) => {
+          console.error("Deepgram error: ", error);
+        });
+      })
+      .catch((error) => {
+        console.error("Error accessing microphone:", error);
+      });
+  }
 
   function stopRecording() {
     if (mediaRecorder.current) {
@@ -356,7 +349,7 @@ function startRecording() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a nanci Bot
+                Llamar a Nancy Bot
               </Button>
             </div>
           ) : (
