@@ -151,14 +151,11 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    try {
-      await avatar.current.interrupt({
-        interruptRequest: { sessionId: data?.sessionId },
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
       });
-    } catch (error) {
-      setDebug("Error interrupting avatar: " + error.message);
-      console.error("Error interrupting avatar: ", error);
-    }
   }
 
   async function endSession() {
@@ -242,7 +239,7 @@ export default function InteractiveAvatar() {
           setRecording(true);
         });
 
-        connection.on(LiveTranscriptionEvents.Transcript, (data) => {
+        connection.on(LiveTranscriptionEvents.Transcript, async (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Received transcription: ", newTranscription);
 
@@ -263,7 +260,8 @@ export default function InteractiveAvatar() {
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
-                handleInterruptWithToken();
+                console.log("Detecte audio mientras habla el avatar");
+                await handleInterrupt();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
@@ -280,18 +278,6 @@ export default function InteractiveAvatar() {
       .catch((error) => {
         console.error("Error accessing microphone:", error);
       });
-  }
-
-  async function handleInterruptWithToken() {
-    const token = await fetchAccessToken();
-    if (token) {
-      try {
-        await handleInterrupt();
-      } catch (error) {
-        setDebug("Error during interrupt with token: " + error.message);
-        console.error("Error during interrupt with token: ", error);
-      }
-    }
   }
 
   function stopRecording() {
