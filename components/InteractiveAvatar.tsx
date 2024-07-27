@@ -151,11 +151,14 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    await avatar.current
-      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
+    try {
+      await avatar.current.interrupt({
+        interruptRequest: { sessionId: data?.sessionId },
       });
+    } catch (error) {
+      setDebug("Error interrupting avatar: " + error.message);
+      console.error("Error interrupting avatar: ", error);
+    }
   }
 
   async function endSession() {
@@ -260,7 +263,6 @@ export default function InteractiveAvatar() {
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
-                // console.log("Detecte audio mientras habla el avatar");
                 handleInterruptWithToken();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
@@ -283,7 +285,12 @@ export default function InteractiveAvatar() {
   async function handleInterruptWithToken() {
     const token = await fetchAccessToken();
     if (token) {
-      await handleInterrupt();
+      try {
+        await handleInterrupt();
+      } catch (error) {
+        setDebug("Error during interrupt with token: " + error.message);
+        console.error("Error during interrupt with token: ", error);
+      }
     }
   }
 
