@@ -35,7 +35,6 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [isTalking, setIsTalking] = useState(false); // Nueva variable de estado
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -48,14 +47,14 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      try {
-        await avatar.current.speak({
+      await avatar.current
+        .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
+        })
+        .catch((e) => {
+          setDebug(e.message);
         });
-        setIsLoadingChat(false);
-      } catch (e) {
-        setDebug(e.message);
-      }
+      setIsLoadingChat(false);
     },
     initialMessages: [
       {
@@ -132,12 +131,10 @@ export default function InteractiveAvatar() {
 
     const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
-      setIsTalking(true); // Set the talking state to true
     };
 
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
-      setIsTalking(false); // Set the talking state to false
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -152,14 +149,11 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-
-    if (isTalking) {
-      await avatar.current
-        .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-        .catch((e) => {
-          setDebug(e.message);
-        });
-    }
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
+      });
   }
 
   async function endSession() {
@@ -180,13 +174,12 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    try {
-      await avatar.current.speak({ taskRequest: { text: text, sessionId: data?.sessionId } });
-      setIsLoadingRepeat(false);
-    } catch (e) {
-      setDebug(e.message);
-      setIsLoadingRepeat(false);
-    }
+    await avatar.current
+      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
+      });
+    setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
@@ -218,6 +211,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
+    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -255,13 +249,9 @@ export default function InteractiveAvatar() {
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
-              if (!isTalking) { // Check if the avatar is not talking before handling the interrupt
-                if (checkForConsecutiveEmpty(newTranscription)) {
-                  console.log("Second condition met: consecutive empty transcriptions.");
-                  setShouldSubmit(true); // Trigger the useEffect to handle submit
-                }
-              } else {
-                console.log("Avatar is talking, will not interrupt.");
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
               }
             }
 
@@ -359,7 +349,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a nanci Bot
+                Llamar a Nancy Bot
               </Button>
             </div>
           ) : (
