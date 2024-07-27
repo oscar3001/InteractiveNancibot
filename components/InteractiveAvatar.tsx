@@ -249,7 +249,6 @@ export default function InteractiveAvatar() {
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
-              handleInterrupt(); // Interrumpir avatar hablando
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
@@ -287,14 +286,14 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for consecutive empty transcriptions
+  // Function to check for  consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
       console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 2) { // Aquí se verifica si hay dos transcripciones vacías consecutivas
+      if (emptyCount >= 1) {
         emptyCount = 0;  // reset counter
-        return true; // Devuelve true para desencadenar handleSubmit
+        return true;
       }
     } else {
       emptyCount = 0;  // reset counter
