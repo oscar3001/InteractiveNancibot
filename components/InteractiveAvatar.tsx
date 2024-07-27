@@ -249,6 +249,7 @@ export default function InteractiveAvatar() {
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
+              handleInterrupt(); // Execute handleInterrupt
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
