@@ -35,6 +35,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
+  const [avatarState, setAvatarState] = useState<string>(""); // Nuevo estado para el avatar
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -131,10 +132,12 @@ export default function InteractiveAvatar() {
 
     const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
+      setAvatarState("avatar_start_talking");
     };
 
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
+      setAvatarState("avatar_stop_talking");
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -211,7 +214,6 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -249,6 +251,7 @@ export default function InteractiveAvatar() {
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
+              handleConditionalLogs(updatedInput, newTranscription); // Nueva función para manejo de logs
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
@@ -286,7 +289,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for  consecutive empty transcriptions
+  // Function to check for consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
@@ -299,6 +302,17 @@ export default function InteractiveAvatar() {
       emptyCount = 0;  // reset counter
     }
     return false;
+  }
+
+  // Function to handle console logs based on conditions
+  function handleConditionalLogs(updatedInput, newTranscription) {
+    const hasText = checkForText(updatedInput);
+    const isAvatarTalking = avatarState === "avatar_start_talking";
+    if (hasText && isAvatarTalking) {
+      console.log("Detecte audio mientras habla el avatar");
+    } else if (hasText && !isAvatarTalking) {
+      console.log("Detecte audio mientras el avatar estaba en silencio");
+    }
   }
 
   return (
@@ -361,7 +375,7 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Inggrese mensaje que se va a repetir"
+              placeholder="Ingrese mensaje que se va a repetir"
               input={text}
               onSubmit={handleSpeak}
               setInput={setText}
