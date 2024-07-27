@@ -22,7 +22,7 @@ import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
 const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg "; // Reemplaza con la URL de tu imagen
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -112,6 +112,7 @@ export default function InteractiveAvatar() {
       );
       setData(res);
       setStream(avatar.current.mediaStream);
+      startRecording(); // Iniciar la grabación al iniciar la sesión
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
@@ -249,7 +250,7 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
               if (checkForConsecutiveEmpty(newTranscription)) {
-                console.log("Second condition met: Two consecutive empty transcriptions.");
+                console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
               }
             }
@@ -285,7 +286,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for two consecutive empty transcriptions
+  // Function to check for  consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
@@ -301,20 +302,16 @@ export default function InteractiveAvatar() {
   }
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      <Card>
-        <CardBody className="h-[500px] flex flex-col justify-center items-center">
+    <div className="w-full h-screen flex flex-col gap-4">
+      <Card className="w-full h-full">
+        <CardBody className="w-full h-full flex flex-col justify-center items-center">
           {stream ? (
-            <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
+            <div className="w-full h-full flex justify-center items-center relative">
               <video
                 ref={mediaStream}
                 autoPlay
                 playsInline
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
+                className="w-full h-full object-cover"
               >
                 <track kind="captions" />
               </video>
@@ -325,7 +322,7 @@ export default function InteractiveAvatar() {
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
-                  Interrupt task
+                  Interrumpir Habla
                 </Button>
                 <Button
                   size="md"
@@ -333,16 +330,23 @@ export default function InteractiveAvatar() {
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
-                  End session
+                  Colgar
                 </Button>
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+            <div
+              className="w-full h-full flex justify-center items-center flex-col gap-8"
+              style={{
+                backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
               <Button
                 size="md"
                 onClick={startSession}
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
                 Llamar a Nancy Bot
@@ -354,62 +358,66 @@ export default function InteractiveAvatar() {
         </CardBody>
         <Divider />
         <CardFooter className="flex flex-col gap-3">
-          <InteractiveAvatarTextInput
-            label="Repeat"
-            placeholder="Inggrese mensaje que se va a repetir"
-            input={text}
-            onSubmit={handleSpeak}
-            setInput={setText}
-            disabled={!stream}
-            loading={isLoadingRepeat}
-          />
-          <InteractiveAvatarTextInput
-            label="Chat"
-            placeholder="Escribe mensaje al avatar"
-            input={input}
-            onSubmit={() => {
-              setIsLoadingChat(true);
-              if (!input) {
-                setDebug("Escribe mensaje al avatar");
-                return;
-              }
-              handleSubmit();
-            }}
-            setInput={setInput}
-            loading={isLoadingChat}
-            endContent={
-              <Tooltip
-                content={!recording ? "Inicio Escucha" : "Detener Escucha"}
-              >
-                <Button
-                  onClick={!recording ? startRecording : stopRecording}
-                  isDisabled={!stream}
-                  isIconOnly
-                  className={clsx(
-                    "mr-4 text-white",
-                    !recording
-                      ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
-                      : ""
-                  )}
-                  size="sm"
-                  variant="shadow"
+          <div className="hidden">
+            <InteractiveAvatarTextInput
+              label="Repeat"
+              placeholder="Inggrese mensaje que se va a repetir"
+              input={text}
+              onSubmit={handleSpeak}
+              setInput={setText}
+              disabled={!stream}
+              loading={isLoadingRepeat}
+            />
+          </div>
+          <div className="hidden">
+            <InteractiveAvatarTextInput
+              label="Chat"
+              placeholder="Escribe mensaje al avatar"
+              input={input}
+              onSubmit={() => {
+                setIsLoadingChat(true);
+                if (!input) {
+                  setDebug("Escribe mensaje al avatar");
+                  return;
+                }
+                handleSubmit();
+              }}
+              setInput={setInput}
+              loading={isLoadingChat}
+              endContent={
+                <Tooltip
+                  content={!recording ? "Inicio Escucha" : "Detener Escucha"}
                 >
-                  {!recording ? (
-                    <Microphone size={20} />
-                  ) : (
-                    <>
-                      <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
-                      <MicrophoneStage size={20} />
-                    </>
-                  )}
-                </Button>
-              </Tooltip>
-            }
-            disabled={!stream}
-          />
+                  <Button
+                    onClick={!recording ? startRecording : stopRecording}
+                    isDisabled={!stream}
+                    isIconOnly
+                    className={clsx(
+                      "mr-4 text-white",
+                      !recording
+                        ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
+                        : ""
+                    )}
+                    size="sm"
+                    variant="shadow"
+                  >
+                    {!recording ? (
+                      <Microphone size={20} />
+                    ) : (
+                      <>
+                        <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
+                        <MicrophoneStage size={20} />
+                      </>
+                    )}
+                  </Button>
+                </Tooltip>
+              }
+              disabled={!stream}
+            />
+          </div>
         </CardFooter>
       </Card>
-      <p className="font-mono text-right">
+      <p className="font-mono text-right hidden">
         <span className="font-bold">Console:</span>
         <br />
         {debug}
