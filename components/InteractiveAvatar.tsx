@@ -151,6 +151,10 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    const newToken = await fetchAccessToken();
+    avatar.current = new StreamingAvatarApi(
+      new Configuration({ accessToken: newToken })
+    );
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
@@ -260,10 +264,8 @@ export default function InteractiveAvatar() {
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
-                console.log("Detecte audio mientras habla el avatar");
                 handleInterrupt();
               } else if (avatarState === "stopped") {
-                console.log("Detecte audio mientras habla el avatar estaba en silencio");
                 handleInterrupt();
               }
             }
