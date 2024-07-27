@@ -20,9 +20,9 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
-const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6";
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -46,8 +46,6 @@ export default function InteractiveAvatar() {
         setDebug("Avatar API not initialized");
         return;
       }
-
-      console.log("Avatar speaking:", message.content);
 
       await avatar.current
         .speak({
@@ -95,12 +93,10 @@ export default function InteractiveAvatar() {
   }
 
   async function startSession() {
-    console.log("Starting session...");
     setIsLoadingSession(true);
     await updateToken();
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
-      console.log("Avatar API is not initialized");
       return;
     }
     try {
@@ -114,7 +110,6 @@ export default function InteractiveAvatar() {
         },
         setDebug
       );
-      console.log("Session started:", res);
       setData(res);
       setStream(avatar.current.mediaStream);
       startRecording(); // Iniciar la grabación al iniciar la sesión
@@ -128,43 +123,42 @@ export default function InteractiveAvatar() {
   }
 
   async function updateToken() {
-    console.log("Updating access token...");
     const newToken = await fetchAccessToken();
-    console.log("New access token:", newToken);
+    console.log("Updating Access Token:", newToken); // Log token for debugging
     avatar.current = new StreamingAvatarApi(
       new Configuration({ accessToken: newToken })
     );
 
-    avatar.current.addEventHandler("avatar_start_talking", (e: any) => {
+    const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
-    });
+    };
 
-    avatar.current.addEventHandler("avatar_stop_talking", (e: any) => {
+    const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
-    });
+    };
+
+    console.log("Adding event handlers:", avatar.current);
+    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
+    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
     setInitialized(true);
-    console.log("Avatar API initialized");
   }
 
   async function handleInterrupt() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
-      console.log("Avatar API not initialized");
       return;
     }
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
-        console.error("Error interrupting:", e);
       });
   }
 
   async function endSession() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
-      console.log("Avatar API not initialized");
       return;
     }
     await avatar.current.stopAvatar(
@@ -172,36 +166,30 @@ export default function InteractiveAvatar() {
       setDebug
     );
     setStream(undefined);
-    console.log("Session ended");
   }
 
   async function handleSpeak() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
-      console.log("Avatar API not initialized");
-      setIsLoadingRepeat(false);
       return;
     }
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
-        console.error("Error in handleSpeak:", e);
       });
     setIsLoadingRepeat(false);
-    console.log("Avatar speaking:", text);
   }
 
   useEffect(() => {
     async function init() {
       const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken);
+      console.log("Initializing with Access Token:", newToken); // Log token for debugging
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 200 })
       );
-      setInitialized(true);
-      console.log("Avatar API initialized on mount");
+      setInitialized(true); // Set initialized to true
     }
     init();
 
@@ -216,17 +204,14 @@ export default function InteractiveAvatar() {
       mediaStream.current.onloadedmetadata = () => {
         mediaStream.current!.play();
         setDebug("Playing");
-        console.log("Media stream playing");
       };
     }
   }, [mediaStream, stream]);
 
   function startRecording() {
-    console.log("Starting recording...");
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let lastTranscriptionTime = 0;
-    const silenceThreshold = 2; // threshold in seconds
+    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -242,7 +227,6 @@ export default function InteractiveAvatar() {
           console.log("Deepgram connection opened.");
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
-            console.log("Sending audio data to Deepgram");
           };
           mediaRecorder.current!.onstop = () => {
             connection.finish();
@@ -251,37 +235,29 @@ export default function InteractiveAvatar() {
           };
           mediaRecorder.current!.start(100);
           setRecording(true);
-          console.log("Recording started");
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          const currentTime = Date.now() / 1000;
-
           console.log("Received transcription: ", newTranscription);
 
-          if (newTranscription.trim()) {
-            lastTranscriptionTime = currentTime;
-            setInput((prevInput) => {
-              const updatedInput = `${prevInput} ${newTranscription}`;
-              console.log("Updated input: ", updatedInput);
+          // Concatenate transcription
+          setInput((prevInput) => {
+            const updatedInput = prevInput + "" + newTranscription;
+            console.log("Updated input: ", updatedInput);
 
-              // Check conditions for handleSubmit
-              if (checkForText(updatedInput)) {
-                console.log("First condition met: Input contains text.");
-                if (checkForConsecutiveEmpty(newTranscription)) {
-                  console.log("Second condition met: Two consecutive empty transcriptions.");
-                  setShouldSubmit(true); // Trigger the useEffect to handle submit
-                }
+            // Check conditions for handleSubmit
+            if (checkForText(updatedInput)) {
+              console.log("First condition met: Input contains text.");
+              handleInterrupt(); // Ejecuta handleInterrupt si se cumple la condición
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
               }
+            }
 
-              return updatedInput;
-            });
-          } else if (currentTime - lastTranscriptionTime > silenceThreshold) {
-            console.log("Silence threshold met, submitting...");
-            setShouldSubmit(true);
-            lastTranscriptionTime = currentTime;
-          }
+            return updatedInput;
+          });
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -297,7 +273,6 @@ export default function InteractiveAvatar() {
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
       setRecording(false);
-      console.log("Recording stopped");
     }
   }
 
@@ -312,7 +287,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for two consecutive empty transcriptions
+  // Function to check for  consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
@@ -375,7 +350,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a Nancy Bot
+                Llamar a nanci Bot
               </Button>
             </div>
           ) : (
