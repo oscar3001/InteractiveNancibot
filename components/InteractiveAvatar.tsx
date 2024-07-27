@@ -302,20 +302,16 @@ export default function InteractiveAvatar() {
   }
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      <Card>
-        <CardBody className="h-[500px] flex flex-col justify-center items-center">
+    <div className="w-full h-screen flex flex-col gap-4">
+      <Card className="w-full h-full">
+        <CardBody className="w-full h-full flex flex-col justify-center items-center">
           {stream ? (
-            <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
+            <div className="w-full h-full flex justify-center items-center relative">
               <video
                 ref={mediaStream}
                 autoPlay
                 playsInline
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "contain",
-                }}
+                className="w-full h-full object-cover"
               >
                 <track kind="captions" />
               </video>
@@ -339,7 +335,14 @@ export default function InteractiveAvatar() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-full self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+            <div
+              className="w-full h-full flex justify-center items-center flex-col gap-8"
+              style={{
+                backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            >
               <Button
                 size="md"
                 onClick={startSession}
