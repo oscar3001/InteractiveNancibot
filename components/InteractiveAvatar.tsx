@@ -153,9 +153,6 @@ export default function InteractiveAvatar() {
       return;
     }
 
-    // Actualizar el token antes de interrumpir
-    await updateToken();
-
     if (isTalking) {
       await avatar.current
         .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
