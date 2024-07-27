@@ -243,13 +243,13 @@ export default function InteractiveAvatar() {
 
           // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + "" + newTranscription;
+            const updatedInput = prevInput + " " + newTranscription;
             console.log("Updated input: ", updatedInput);
 
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
-              handleInterrupt(); // Ejecuta handleInterrupt si se cumple la condición
+              handleInterrupt(); // Interrumpir avatar hablando
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
@@ -287,14 +287,14 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for  consecutive empty transcriptions
+  // Function to check for consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
       console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 1) {
+      if (emptyCount >= 2) { // Aquí se verifica si hay dos transcripciones vacías consecutivas
         emptyCount = 0;  // reset counter
-        return true;
+        return true; // Devuelve true para desencadenar handleSubmit
       }
     } else {
       emptyCount = 0;  // reset counter
@@ -350,7 +350,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a nanci Bot
+                Llamar a Nancy Bot
               </Button>
             </div>
           ) : (
