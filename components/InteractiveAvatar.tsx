@@ -35,6 +35,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
+  const [isTalking, setIsTalking] = useState(false); // Nueva variable de estado
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -131,10 +132,12 @@ export default function InteractiveAvatar() {
 
     const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
+      setIsTalking(true); // Set the talking state to true
     };
 
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
+      setIsTalking(false); // Set the talking state to false
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -149,11 +152,17 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    await avatar.current
-      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
-      });
+
+    // Actualizar el token antes de interrumpir
+    await updateToken();
+
+    if (isTalking) {
+      await avatar.current
+        .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+        .catch((e) => {
+          setDebug(e.message);
+        });
+    }
   }
 
   async function endSession() {
@@ -249,6 +258,7 @@ export default function InteractiveAvatar() {
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
+              handleInterrupt(); // Execute handleInterrupt
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
@@ -349,7 +359,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a Nancy Bot
+                Llamar a nanci Bot
               </Button>
             </div>
           ) : (
