@@ -239,7 +239,7 @@ export default function InteractiveAvatar() {
           setRecording(true);
         });
 
-        connection.on(LiveTranscriptionEvents.Transcript, async (data) => {
+        connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Received transcription: ", newTranscription);
 
@@ -261,9 +261,10 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                await handleInterrupt();
+                handleInterrupt();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
+                handleInterrupt();
               }
             }
 
