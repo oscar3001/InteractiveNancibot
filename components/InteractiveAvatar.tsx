@@ -35,7 +35,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [avatarState, setAvatarState] = useState<string>(""); // Nuevo estado para el avatar
+  const [avatarState, setAvatarState] = useState<string>("avatar_stop_talking"); // Estado del avatar inicializado en "avatar_stop_talking"
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -251,7 +251,7 @@ export default function InteractiveAvatar() {
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
-              handleConditionalLogs(updatedInput, newTranscription); // Nueva función para manejo de logs
+              handleConditionalLogs(updatedInput); // Nueva función para manejo de logs
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
                 setShouldSubmit(true); // Trigger the useEffect to handle submit
@@ -305,7 +305,7 @@ export default function InteractiveAvatar() {
   }
 
   // Function to handle console logs based on conditions
-  function handleConditionalLogs(updatedInput, newTranscription) {
+  function handleConditionalLogs(updatedInput) {
     const hasText = checkForText(updatedInput);
     const isAvatarTalking = avatarState === "avatar_start_talking";
     if (hasText && isAvatarTalking) {
