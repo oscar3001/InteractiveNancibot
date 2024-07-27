@@ -147,12 +147,6 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    const newToken = await fetchAccessToken();
-    console.log("Executing handleInterrupt with Access Token:", newToken); // Log token for debugging
-    avatar.current = new StreamingAvatarApi(
-      new Configuration({ accessToken: newToken })
-    );
-
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
@@ -266,7 +260,8 @@ export default function InteractiveAvatar() {
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
-                handleInterrupt(); // Execute handleInterrupt when audio is detected while avatar is speaking
+                // console.log("Detecte audio mientras habla el avatar");
+                handleInterruptWithToken();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
@@ -283,6 +278,13 @@ export default function InteractiveAvatar() {
       .catch((error) => {
         console.error("Error accessing microphone:", error);
       });
+  }
+
+  async function handleInterruptWithToken() {
+    const token = await fetchAccessToken();
+    if (token) {
+      await handleInterrupt();
+    }
   }
 
   function stopRecording() {
@@ -303,7 +305,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for  consecutive empty transcriptions
+  // Function to check for consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
