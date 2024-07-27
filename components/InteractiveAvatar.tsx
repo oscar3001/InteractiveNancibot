@@ -322,7 +322,7 @@ export default function InteractiveAvatar() {
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
-                  Interrupt task
+                  Interrumpir Habla
                 </Button>
                 <Button
                   size="md"
@@ -330,7 +330,7 @@ export default function InteractiveAvatar() {
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
-                  End session
+                  Colgar
                 </Button>
               </div>
             </div>
