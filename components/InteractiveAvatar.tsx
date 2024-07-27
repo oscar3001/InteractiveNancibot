@@ -48,14 +48,14 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      await avatar.current
-        .speak({
+      try {
+        await avatar.current.speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
-        })
-        .catch((e) => {
-          setDebug(e.message);
         });
-      setIsLoadingChat(false);
+        setIsLoadingChat(false);
+      } catch (e) {
+        setDebug(e.message);
+      }
     },
     initialMessages: [
       {
@@ -183,12 +183,13 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    await avatar.current
-      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
-      });
-    setIsLoadingRepeat(false);
+    try {
+      await avatar.current.speak({ taskRequest: { text: text, sessionId: data?.sessionId } });
+      setIsLoadingRepeat(false);
+    } catch (e) {
+      setDebug(e.message);
+      setIsLoadingRepeat(false);
+    }
   }
 
   useEffect(() => {
@@ -220,7 +221,6 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
