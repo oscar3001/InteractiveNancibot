@@ -20,24 +20,24 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
-const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; 
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg "; // Reemplaza con la URL de tu imagen
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
-  const [stream, setStream] = useState();
-  const [debug, setDebug] = useState();
-  const [data, setData] = useState();
-  const [text, setText] = useState("");
+  const [stream, setStream] = useState<MediaStream>();
+  const [debug, setDebug] = useState<string>();
+  const [data, setData] = useState<NewSessionData>();
+  const [text, setText] = useState<string>("");
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const mediaStream = useRef(null);
-  const avatar = useRef(null);
-  const mediaRecorder = useRef(null);
+  const mediaStream = useRef<HTMLVideoElement>(null);
+  const avatar = useRef<StreamingAvatarApi | null>(null);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -48,7 +48,9 @@ export default function InteractiveAvatar() {
       }
 
       await avatar.current
-        .speak({ taskRequest: { text: message.content, sessionId: data?.sessionId } })
+        .speak({
+          taskRequest: { text: message.content, sessionId: data?.sessionId },
+        })
         .catch((e) => {
           setDebug(e.message);
         });
@@ -58,7 +60,7 @@ export default function InteractiveAvatar() {
       {
         id: "1",
         role: "system",
-        content: "eres Nancibot, un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario. Estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. Hazle preguntas al usuario para conocer sus gustos y mantener la conversación fluida.",
+        content: "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
       },
     ],
   });
@@ -68,11 +70,11 @@ export default function InteractiveAvatar() {
       console.log("Conditions met, submitting...");
       setIsLoadingChat(true);
       if (!input) {
-        setDebug("Ingrese el mensaje a enviar");
+        setDebug("ingrese el mensaje a enviar");
         return;
       }
       handleSubmit();
-      setShouldSubmit(false);  // Reset the flag
+      setShouldSubmit(false); // Reset the flag
     }
   }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
 
@@ -82,7 +84,7 @@ export default function InteractiveAvatar() {
         method: "POST",
       });
       const token = await response.text();
-      console.log("Access Token:", token);  // Log the token to verify
+      console.log("Access Token:", token); // Log the token to verify
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
@@ -98,16 +100,18 @@ export default function InteractiveAvatar() {
       return;
     }
     try {
-      const res = await avatar.current.createStartAvatar({
-        newSessionRequest: {
-          quality: "low",
-          avatarName: DEFAULT_AVATAR_ID,
-          voice: { voiceId: DEFAULT_VOICE_ID },
+      const res = await avatar.current.createStartAvatar(
+        {
+          newSessionRequest: {
+            quality: "low",
+            avatarName: DEFAULT_AVATAR_ID,
+            voice: { voiceId: DEFAULT_VOICE_ID },
+          },
         },
-      }, setDebug);
+        setDebug
+      );
       setData(res);
       setStream(avatar.current.mediaStream);
-      startRecording();  // Iniciar la grabación al iniciar la sesión
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
@@ -119,7 +123,7 @@ export default function InteractiveAvatar() {
 
   async function updateToken() {
     const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken);  // Log token for debugging
+    console.log("Updating Access Token:", newToken); // Log token for debugging
     avatar.current = new StreamingAvatarApi(
       new Configuration({ accessToken: newToken })
     );
@@ -180,11 +184,11 @@ export default function InteractiveAvatar() {
   useEffect(() => {
     async function init() {
       const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken);  // Log token for debugging
+      console.log("Initializing with Access Token:", newToken); // Log token for debugging
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 200 })
       );
-      setInitialized(true);  // Set initialized to true
+      setInitialized(true); // Set initialized to true
     }
     init();
 
@@ -206,7 +210,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let silenceTimer: ReturnType<typeof setTimeout> | null = null;
+    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -236,18 +240,18 @@ export default function InteractiveAvatar() {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Received transcription: ", newTranscription);
 
+          // Concatenate transcription
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
             console.log("Updated input: ", updatedInput);
 
+            // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
-              if (silenceTimer) {
-                clearTimeout(silenceTimer);
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: Two consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
               }
-              silenceTimer = setTimeout(() => {
-                setShouldSubmit(true);  // Trigger the useEffect to handle submit
-              }, 3000);  // 3 seconds
             }
 
             return updatedInput;
@@ -270,52 +274,146 @@ export default function InteractiveAvatar() {
     }
   }
 
-  function checkForText(input: string) {
+  // Function to check if input contains any text or numbers
+  function checkForText(input) {
     const regex = /\S/;
     const result = regex.test(input);
     console.log("Checking for text in input: ", input, " Result: ", result);
     return result;
   }
 
+  // Variable to keep track of consecutive empty transcriptions
+  let emptyCount = 0;
+
+  // Function to check for two consecutive empty transcriptions
+  function checkForConsecutiveEmpty(newTranscription) {
+    if (newTranscription.trim() === "") {
+      emptyCount++;
+      console.log("Empty transcription received. Empty count: ", emptyCount);
+      if (emptyCount >= 1) {
+        emptyCount = 0;  // reset counter
+        return true;
+      }
+    } else {
+      emptyCount = 0;  // reset counter
+    }
+    return false;
+  }
+
   return (
-    <>
-      {stream ? (
-        <>
-          <Button onClick={handleInterrupt}>Interrumpir Habla</Button>
-          <Button onClick={endSession}>Colgar</Button>
-        </>
-      ) : !isLoadingSession ? (
-        <Button onClick={startSession}>Llamar a Nancy Bot</Button>
-      ) : (
-        <Spinner />
-      )}
-
-      {/* Other UI components */}
-
-      <InteractiveAvatarTextInput
-        onSendMessage={() => {
-          setIsLoadingChat(true);
-          if (!input) {
-            setDebug("Escribe mensaje al avatar");
-            return;
-          }
-          handleSubmit();
-        }}
-        setInput={setInput}
-        loading={isLoadingChat}
-        endContent={
-          <>
-            {!recording ? (
-              <Microphone onClick={startRecording} />
-            ) : (
-              <MicrophoneStage onClick={stopRecording} />
-            )}
-          </>
-        }
-        disabled={!stream}
-      />
-
-      <div>Console: {debug}</div>
-    </>
+    <div className="w-full flex flex-col gap-4">
+      <Card>
+        <CardBody className="h-[500px] flex flex-col justify-center items-center">
+          {stream ? (
+            <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden">
+              <video
+                ref={mediaStream}
+                autoPlay
+                playsInline
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                }}
+              >
+                <track kind="captions" />
+              </video>
+              <div className="flex flex-col gap-2 absolute bottom-3 right-3">
+                <Button
+                  size="md"
+                  onClick={handleInterrupt}
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                  variant="shadow"
+                >
+                  Interrupt task
+                </Button>
+                <Button
+                  size="md"
+                  onClick={endSession}
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                  variant="shadow"
+                >
+                  End session
+                </Button>
+              </div>
+            </div>
+          ) : !isLoadingSession ? (
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundImage: `url(${BACKGROUND_IMAGE_URL})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+              <Button
+                size="md"
+                onClick={startSession}
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
+                variant="shadow"
+              >
+                Llamar a Nancy Bot
+              </Button>
+            </div>
+          ) : (
+            <Spinner size="lg" color="default" />
+          )}
+        </CardBody>
+        <Divider />
+        <CardFooter className="flex flex-col gap-3">
+          <InteractiveAvatarTextInput
+            label="Repeat"
+            placeholder="Inggrese mensaje que se va a repetir"
+            input={text}
+            onSubmit={handleSpeak}
+            setInput={setText}
+            disabled={!stream}
+            loading={isLoadingRepeat}
+          />
+          <InteractiveAvatarTextInput
+            label="Chat"
+            placeholder="Escribe mensaje al avatar"
+            input={input}
+            onSubmit={() => {
+              setIsLoadingChat(true);
+              if (!input) {
+                setDebug("Escribe mensaje al avatar");
+                return;
+              }
+              handleSubmit();
+            }}
+            setInput={setInput}
+            loading={isLoadingChat}
+            endContent={
+              <Tooltip
+                content={!recording ? "Inicio Escucha" : "Detener Escucha"}
+              >
+                <Button
+                  onClick={!recording ? startRecording : stopRecording}
+                  isDisabled={!stream}
+                  isIconOnly
+                  className={clsx(
+                    "mr-4 text-white",
+                    !recording
+                      ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
+                      : ""
+                  )}
+                  size="sm"
+                  variant="shadow"
+                >
+                  {!recording ? (
+                    <Microphone size={20} />
+                  ) : (
+                    <>
+                      <div className="absolute h-full w-full bg-gradient-to-tr from-indigo-500 to-indigo-300 animate-pulse -z-10"></div>
+                      <MicrophoneStage size={20} />
+                    </>
+                  )}
+                </Button>
+              </Tooltip>
+            }
+            disabled={!stream}
+          />
+        </CardFooter>
+      </Card>
+      <p className="font-mono text-right">
+        <span className="font-bold">Console:</span>
+        <br />
+        {debug}
+      </p>
+    </div>
   );
 }
