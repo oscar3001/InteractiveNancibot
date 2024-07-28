@@ -149,6 +149,11 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
+  // Nueva función que actualiza el token antes de llamar a handleInterrupt
+async function handleInterruptWithUpdatedToken() {
+  await updateToken();
+  await handleInterrupt();
+}
   async function handleInterrupt() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
@@ -248,7 +253,7 @@ export default function InteractiveAvatar() {
 
           // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
             console.log("Updated input: ", updatedInput);
 
             // Check conditions for handleSubmit
@@ -264,7 +269,7 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                handleInterrupt();
+                await handleInterruptWithUpdatedToken();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
