@@ -116,7 +116,7 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
+        There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}
       );
     }
     setIsLoadingSession(false);
@@ -151,10 +151,6 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    const newToken = await fetchAccessToken();
-    avatar.current = new StreamingAvatarApi(
-      new Configuration({ accessToken: newToken })
-    );
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
@@ -264,9 +260,10 @@ export default function InteractiveAvatar() {
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
-                handleInterrupt();
+                console.log("Detecte audio mientras habla el avatar");
+                
               } else if (avatarState === "stopped") {
-                handleInterrupt();
+                console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
             }
 
@@ -301,7 +298,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for consecutive empty transcriptions
+  // Function to check for  consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
@@ -353,7 +350,7 @@ export default function InteractiveAvatar() {
             <div
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
-                backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
+                backgroundImage: url(${BACKGROUND_IMAGE_URL}),
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
