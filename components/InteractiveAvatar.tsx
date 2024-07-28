@@ -116,7 +116,7 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}
+        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
       );
     }
     setIsLoadingSession(false);
@@ -261,7 +261,6 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
@@ -350,7 +349,7 @@ export default function InteractiveAvatar() {
             <div
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
-                backgroundImage: url(${BACKGROUND_IMAGE_URL}),
+                backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
