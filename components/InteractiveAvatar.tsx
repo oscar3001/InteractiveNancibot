@@ -147,7 +147,7 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    await updateToken(); // Asegúrate de que el token esté actualizado
+    await updateToken();
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
@@ -262,7 +262,7 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                handleInterrupt(); // Aquí se ejecuta automáticamente handleInterrupt
+                handleInterrupt();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
@@ -299,7 +299,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for consecutive empty transcriptions
+  // Function to check for  consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
