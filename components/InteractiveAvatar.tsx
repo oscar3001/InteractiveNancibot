@@ -147,6 +147,7 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
+    await updateToken(); // Asegúrate de que el token esté actualizado
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
