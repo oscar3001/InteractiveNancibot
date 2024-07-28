@@ -143,6 +143,9 @@ export default function InteractiveAvatar() {
     avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
     avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
+    // Initialize avatar state as stopped by default
+    localStorage.setItem("avatarState", "stopped");
+
     setInitialized(true);
   }
 
