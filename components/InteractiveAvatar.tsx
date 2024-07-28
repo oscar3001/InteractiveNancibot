@@ -264,6 +264,7 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
+                handleInterrupt();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
