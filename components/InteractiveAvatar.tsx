@@ -66,8 +66,6 @@ export default function InteractiveAvatar() {
     ],
   });
 
-  let timerId = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     if (shouldSubmit) {
       console.log("Conditions met, submitting...");
@@ -219,7 +217,9 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
+    let emptyTranscriptionCount = 0;
     let transcriptionBuffer = "";
+    let timeoutId: NodeJS.Timeout;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -229,7 +229,9 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: 'nova-2',
           language: 'es',
-          utterance_end_ms: 2000, // Ajustar según sea necesario para detectar pausas en el habla
+          interim_results: true, // Obtener resultados intermedios para reducir latencia
+          endpointing: true, // Finalizar la transcripción rápidamente cuando se detecte el fin del habla
+          utterance_end_ms: 4000, // Definir el tiempo de espera para el final de una expresión
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -242,33 +244,43 @@ export default function InteractiveAvatar() {
             console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(100);
+          mediaRecorder.current!.start(50);
           setRecording(true);
+
+          setInterval(() => {
+            if (connection.getReadyState() === WebSocket.OPEN) {
+              connection.keepAlive();
+            }
+          }, 7000);
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Received transcription: ", newTranscription);
-          
-          transcriptionBuffer += newTranscription;
-          
-          if (timerId.current) {
-            clearTimeout(timerId.current);
-          }
-          
-          timerId.current = setTimeout(() => {
-            setInput(transcriptionBuffer);
-            setShouldSubmit(true);
-            transcriptionBuffer = ""; // Clear the buffer after submission
-          }, 4000); // 4 seconds timer
-          
-          const avatarState = localStorage.getItem("avatarState");
-          if (/\S/.test(newTranscription) && avatarState === "started") {
-            console.log("Detecte audio mientras habla el avatar");
-            if (interruptButtonRef.current) {
-              interruptButtonRef.current.click();
+
+          // Concatenate transcription
+          setInput((prevInput) => {
+            const updatedInput = prevInput + " " + newTranscription;
+            transcriptionBuffer += " " + newTranscription;
+
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              console.log("Timer ended, submitting transcription.");
+              setShouldSubmit(true);
+              handleSubmit();
+              transcriptionBuffer = "";
+            }, 4000); // 4 seconds timer
+
+            const avatarState = localStorage.getItem("avatarState");
+            if (/\S/.test(updatedInput) && avatarState === "started") {
+              console.log("Detecte audio mientras habla el avatar");
+              if (interruptButtonRef.current) {
+                interruptButtonRef.current.click();
+              }
             }
-          }
+
+            return updatedInput;
+          });
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -285,6 +297,32 @@ export default function InteractiveAvatar() {
       mediaRecorder.current.stop();
       setRecording(false);
     }
+  }
+
+  // Function to check if input contains any text or numbers
+  function checkForText(input) {
+    const regex = /\S/;
+    const result = regex.test(input);
+    console.log("Checking for text in input: ", input, " Result: ", result);
+    return result;
+  }
+
+  // Variable to keep track of consecutive empty transcriptions
+  let emptyCount = 0;
+
+  // Function to check for  consecutive empty transcriptions
+  function checkForConsecutiveEmpty(newTranscription) {
+    if (newTranscription.trim() === "") {
+      emptyCount++;
+      console.log("Empty transcription received. Empty count: ", emptyCount);
+      if (emptyCount >= 1) {
+        emptyCount = 0;  // reset counter
+        return true;
+      }
+    } else {
+      emptyCount = 0;  // reset counter
+    }
+    return false;
   }
 
   return (
