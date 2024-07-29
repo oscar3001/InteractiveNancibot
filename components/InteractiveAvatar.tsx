@@ -92,35 +92,11 @@ export default function InteractiveAvatar() {
     }
   }
 
-  async function initializeAvatarApi() {
-    const newToken = await fetchAccessToken();
-    console.log("Initializing with Access Token:", newToken); // Log token for debugging
-    avatar.current = new StreamingAvatarApi(
-      new Configuration({ accessToken: newToken, jitterBuffer: 200 })
-    );
-
-    const startTalkCallback = (e: any) => {
-      console.log("Avatar started talking", e);
-      localStorage.setItem("avatarState", "started");
-    };
-
-    const stopTalkCallback = (e: any) => {
-      console.log("Avatar stopped talking", e);
-      localStorage.setItem("avatarState", "stopped");
-    };
-
-    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
-    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
-
-    setInitialized(true);
-  }
-
   async function startSession() {
     setIsLoadingSession(true);
-    await initializeAvatarApi();
+    await updateToken();
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
-      setIsLoadingSession(false);
       return;
     }
     try {
@@ -146,26 +122,43 @@ export default function InteractiveAvatar() {
     setIsLoadingSession(false);
   }
 
+  async function updateToken() {
+    const newToken = await fetchAccessToken();
+    console.log("Updating Access Token:", newToken); // Log token for debugging
+    avatar.current = new StreamingAvatarApi(
+      new Configuration({ accessToken: newToken })
+    );
+
+    const startTalkCallback = (e: any) => {
+      console.log("Avatar started talking", e);
+      localStorage.setItem("avatarState", "started");
+    };
+
+    const stopTalkCallback = (e: any) => {
+      console.log("Avatar stopped talking", e);
+      localStorage.setItem("avatarState", "stopped");
+    };
+
+    console.log("Adding event handlers:", avatar.current);
+    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
+    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
+
+    // Initialize avatar state as stopped by default
+    localStorage.setItem("avatarState", "stopped");
+
+    setInitialized(true);
+  }
+
   async function handleInterrupt() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.log("Attempting to interrupt avatar...");
-
-    try {
-      const token = await fetchAccessToken();
-      avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: token })
-      );
-      await avatar.current.interrupt({
-        interruptRequest: { sessionId: data?.sessionId },
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
       });
-      console.log("Interrupt request successful");
-    } catch (e) {
-      console.error("Error in handleInterrupt:", e); // Log error for debugging
-      setDebug(e.message);
-    }
   }
 
   async function endSession() {
@@ -189,14 +182,21 @@ export default function InteractiveAvatar() {
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
-        console.error("Error in handleSpeak:", e); // Log error for debugging
         setDebug(e.message);
       });
     setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
-    initializeAvatarApi();
+    async function init() {
+      const newToken = await fetchAccessToken();
+      console.log("Initializing with Access Token:", newToken); // Log token for debugging
+      avatar.current = new StreamingAvatarApi(
+        new Configuration({ accessToken: newToken, jitterBuffer: 200 })
+      );
+      setInitialized(true); // Set initialized to true
+    }
+    init();
 
     return () => {
       endSession();
@@ -264,7 +264,7 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                handleInterrupt();
+                handleInterrupt().catch((error) => console.error("Error handling interrupt:", error));
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
