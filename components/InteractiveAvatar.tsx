@@ -92,9 +92,17 @@ export default function InteractiveAvatar() {
     }
   }
 
+  async function getAvatarApi() {
+    const newToken = await fetchAccessToken();
+    console.log("Creating new instance of StreamingAvatarApi with token:", newToken);
+    return new StreamingAvatarApi(
+      new Configuration({ accessToken: newToken })
+    );
+  }
+
   async function startSession() {
     setIsLoadingSession(true);
-    await updateToken();
+    avatar.current = await getAvatarApi();
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
       return;
@@ -122,43 +130,13 @@ export default function InteractiveAvatar() {
     setIsLoadingSession(false);
   }
 
-  async function updateToken() {
-    const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken); // Log token for debugging
-    avatar.current = new StreamingAvatarApi(
-      new Configuration({ accessToken: newToken })
-    );
-
-    const startTalkCallback = (e: any) => {
-      console.log("Avatar started talking", e);
-      localStorage.setItem("avatarState", "started");
-    };
-
-    const stopTalkCallback = (e: any) => {
-      console.log("Avatar stopped talking", e);
-      localStorage.setItem("avatarState", "stopped");
-    };
-
-    console.log("Adding event handlers:", avatar.current);
-    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
-    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
-
-    // Initialize avatar state as stopped by default
-    localStorage.setItem("avatarState", "stopped");
-
-    setInitialized(true);
-  }
-
   async function handleInterrupt() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
     }
     console.log("Attempting to interrupt avatar...");
-    const token = await fetchAccessToken();
-    avatar.current = new StreamingAvatarApi(
-      new Configuration({ accessToken: token })
-    );
+    avatar.current = await getAvatarApi();
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .then(() => {
@@ -169,7 +147,8 @@ export default function InteractiveAvatar() {
         setDebug(e.message);
         if (e.message.includes("Unauthorized")) {
           console.log("401 Unauthorized error. Attempting to update token...");
-          updateToken().then(() => {
+          getAvatarApi().then((newAvatarApi) => {
+            avatar.current = newAvatarApi;
             console.log("Token updated. Retrying interrupt...");
             avatar.current
               .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
@@ -211,11 +190,7 @@ export default function InteractiveAvatar() {
 
   useEffect(() => {
     async function init() {
-      const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken); // Log token for debugging
-      avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 200 })
-      );
+      avatar.current = await getAvatarApi();
       setInitialized(true); // Set initialized to true
     }
     init();
