@@ -66,6 +66,8 @@ export default function InteractiveAvatar() {
     ],
   });
 
+  let timerId = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (shouldSubmit) {
       console.log("Conditions met, submitting...");
@@ -217,8 +219,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyTranscriptionCount = 0;
-    let timer: NodeJS.Timeout;
+    let transcriptionBuffer = "";
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -228,8 +229,7 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: 'nova-2',
           language: 'es',
-          interim_results: true,
-          endpointing: true,
+          utterance_end_ms: 2000, // Ajustar según sea necesario para detectar pausas en el habla
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -242,40 +242,33 @@ export default function InteractiveAvatar() {
             console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(50);
+          mediaRecorder.current!.start(100);
           setRecording(true);
-
-          setInterval(() => {
-            if (connection.getReadyState() === WebSocket.OPEN) {
-              connection.keepAlive();
-            }
-          }, 7000);
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-
-          clearTimeout(timer);
-          timer = setTimeout(() => {
-            if (input.trim()) {
-              setShouldSubmit(true);
-              handleSubmit();
-              setInput(""); // Reset input after submitting
+          console.log("Received transcription: ", newTranscription);
+          
+          transcriptionBuffer += newTranscription;
+          
+          if (timerId.current) {
+            clearTimeout(timerId.current);
+          }
+          
+          timerId.current = setTimeout(() => {
+            setInput(transcriptionBuffer);
+            setShouldSubmit(true);
+            transcriptionBuffer = ""; // Clear the buffer after submission
+          }, 4000); // 4 seconds timer
+          
+          const avatarState = localStorage.getItem("avatarState");
+          if (/\S/.test(newTranscription) && avatarState === "started") {
+            console.log("Detecte audio mientras habla el avatar");
+            if (interruptButtonRef.current) {
+              interruptButtonRef.current.click();
             }
-          }, 4000);
-
-          setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
-
-            const avatarState = localStorage.getItem("avatarState");
-            if (/\S/.test(updatedInput) && avatarState === "started") {
-              if (interruptButtonRef.current) {
-                interruptButtonRef.current.click();
-              }
-            }
-
-            return updatedInput;
-          });
+          }
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
