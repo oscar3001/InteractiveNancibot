@@ -92,11 +92,35 @@ export default function InteractiveAvatar() {
     }
   }
 
+  async function initializeAvatarApi() {
+    const newToken = await fetchAccessToken();
+    console.log("Initializing with Access Token:", newToken); // Log token for debugging
+    avatar.current = new StreamingAvatarApi(
+      new Configuration({ accessToken: newToken, jitterBuffer: 200 })
+    );
+
+    const startTalkCallback = (e: any) => {
+      console.log("Avatar started talking", e);
+      localStorage.setItem("avatarState", "started");
+    };
+
+    const stopTalkCallback = (e: any) => {
+      console.log("Avatar stopped talking", e);
+      localStorage.setItem("avatarState", "stopped");
+    };
+
+    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
+    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
+
+    setInitialized(true);
+  }
+
   async function startSession() {
     setIsLoadingSession(true);
-    await updateToken();
+    await initializeAvatarApi();
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
+      setIsLoadingSession(false);
       return;
     }
     try {
@@ -120,33 +144,6 @@ export default function InteractiveAvatar() {
       );
     }
     setIsLoadingSession(false);
-  }
-
-  async function updateToken() {
-    const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken); // Log token for debugging
-    avatar.current = new StreamingAvatarApi(
-      new Configuration({ accessToken: newToken })
-    );
-
-    const startTalkCallback = (e: any) => {
-      console.log("Avatar started talking", e);
-      localStorage.setItem("avatarState", "started");
-    };
-
-    const stopTalkCallback = (e: any) => {
-      console.log("Avatar stopped talking", e);
-      localStorage.setItem("avatarState", "stopped");
-    };
-
-    console.log("Adding event handlers:", avatar.current);
-    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
-    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
-
-    // Initialize avatar state as stopped by default
-    localStorage.setItem("avatarState", "stopped");
-
-    setInitialized(true);
   }
 
   async function handleInterrupt() {
@@ -199,15 +196,7 @@ export default function InteractiveAvatar() {
   }
 
   useEffect(() => {
-    async function init() {
-      const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken); // Log token for debugging
-      avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 200 })
-      );
-      setInitialized(true); // Set initialized to true
-    }
-    init();
+    initializeAvatarApi();
 
     return () => {
       endSession();
