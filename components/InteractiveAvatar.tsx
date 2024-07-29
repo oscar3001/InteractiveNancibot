@@ -19,10 +19,11 @@ import clsx from "clsx";
 import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
+import movioApi from '@api/movio-api'; // Importa movioApi para interrupción
 
-const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
-const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6";
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -161,6 +162,31 @@ export default function InteractiveAvatar() {
       });
   }
 
+  async function handleCompleteInterrupt() {
+    try {
+      // Fetch new token
+      const token = await fetchAccessToken();
+      console.log("Fetched new token:", token);
+      
+      // Initialize the API with the new token
+      movioApi.auth(token);
+
+      // Call the interruptTask function with the correct session ID
+      const response = await movioApi.interruptTask({ session_id: data?.sessionId });
+      console.log("Interrupt response:", response);
+      
+      // Check for errors
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      
+      console.log("Successfully interrupted the session");
+    } catch (error) {
+      console.error("Error during complete interrupt:", error);
+      setDebug(error.message);
+    }
+  }
+
   async function endSession() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
@@ -264,32 +290,8 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-
-              // Obteniendo un nuevo token
-              const newToken = await fetchAccessToken();
-              if (!newToken) {
-                console.error("Failed to fetch new token.");
-                return updatedInput;
-              }
-
-              avatar.current = new StreamingAvatarApi(
-                new Configuration({ accessToken: newToken })
-              );
-
-              // Verificando que la API esté inicializada
-              if (!avatar.current) {
-                console.error("Avatar API not initialized after token update.");
-                return updatedInput;
-              }
-
-              // Llamando a la API de interrupción
-              await avatar.current
-                .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-                .then(({ data }) => console.log(data))
-                .catch(err => console.error("Error handling interrupt:", err));
-
-
-                
+                // Llama a handleCompleteInterrupt aquí
+                handleCompleteInterrupt().catch((error) => console.error("Error handling complete interrupt:", error));
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
