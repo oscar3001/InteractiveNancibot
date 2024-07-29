@@ -155,6 +155,8 @@ export default function InteractiveAvatar() {
       return;
     }
     console.log("Attempting to interrupt avatar...");
+    const token = await fetchAccessToken();
+    avatar.current.configuration.accessToken = token;
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .then(() => {
