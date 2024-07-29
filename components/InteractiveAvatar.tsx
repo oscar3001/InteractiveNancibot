@@ -154,11 +154,27 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    console.log("Attempting to interrupt avatar...");
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .then(() => {
+        console.log("Interrupt request successful");
+      })
       .catch((e) => {
         console.error("Error in handleInterrupt:", e); // Log error for debugging
         setDebug(e.message);
+        if (e.message.includes("Unauthorized")) {
+          console.log("401 Unauthorized error. Attempting to update token...");
+          updateToken().then(() => {
+            console.log("Token updated. Retrying interrupt...");
+            avatar.current
+              .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+              .catch((retryError) => {
+                console.error("Retry error in handleInterrupt:", retryError);
+                setDebug(retryError.message);
+              });
+          });
+        }
       });
   }
 
