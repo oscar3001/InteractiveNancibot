@@ -149,11 +149,6 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
-  // Nueva función que actualiza el token antes de llamar a handleInterrupt
-async function handleInterruptWithUpdatedToken() {
-  await updateToken();
-  await handleInterrupt();
-}
   async function handleInterrupt() {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
@@ -162,6 +157,7 @@ async function handleInterruptWithUpdatedToken() {
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
+        console.error("Error in handleInterrupt:", e); // Log error for debugging
         setDebug(e.message);
       });
   }
@@ -187,6 +183,7 @@ async function handleInterruptWithUpdatedToken() {
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
+        console.error("Error in handleSpeak:", e); // Log error for debugging
         setDebug(e.message);
       });
     setIsLoadingRepeat(false);
@@ -269,7 +266,7 @@ async function handleInterruptWithUpdatedToken() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                handleInterruptWithUpdatedToken();
+                handleInterrupt();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
