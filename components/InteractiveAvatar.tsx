@@ -269,7 +269,7 @@ async function handleInterruptWithUpdatedToken() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                await handleInterruptWithUpdatedToken();
+                handleInterruptWithUpdatedToken();
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
