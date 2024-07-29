@@ -218,8 +218,6 @@ export default function InteractiveAvatar() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
     let emptyTranscriptionCount = 0;
-    let transcriptionBuffer = "";
-    let timeoutId: NodeJS.Timeout;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -229,9 +227,6 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: 'nova-2',
           language: 'es',
-          interim_results: true, // Obtener resultados intermedios para reducir latencia
-          endpointing: true, // Finalizar la transcripción rápidamente cuando se detecte el fin del habla
-          utterance_end_ms: 4000, // Definir el tiempo de espera para el final de una expresión
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -244,14 +239,8 @@ export default function InteractiveAvatar() {
             console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(50);
+          mediaRecorder.current!.start(40);
           setRecording(true);
-
-          setInterval(() => {
-            if (connection.getReadyState() === WebSocket.OPEN) {
-              connection.keepAlive();
-            }
-          }, 7000);
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
@@ -260,22 +249,28 @@ export default function InteractiveAvatar() {
 
           // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
-            transcriptionBuffer += " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
+            console.log("Updated input: ", updatedInput);
 
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => {
-              console.log("Timer ended, submitting transcription.");
-              setShouldSubmit(true);
-              handleSubmit();
-              transcriptionBuffer = "";
-            }, 4000); // 4 seconds timer
+            // Check conditions for handleSubmit
+            if (checkForText(updatedInput)) {
+              console.log("First condition met: Input contains text.");
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
+              }
+            }
 
             const avatarState = localStorage.getItem("avatarState");
-            if (/\S/.test(updatedInput) && avatarState === "started") {
-              console.log("Detecte audio mientras habla el avatar");
-              if (interruptButtonRef.current) {
-                interruptButtonRef.current.click();
+            if (checkForText(updatedInput)) {
+              if (avatarState === "started") {
+                console.log("Detecte audio mientras habla el avatar");
+                //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
+                if (interruptButtonRef.current) {
+                  interruptButtonRef.current.click();
+                }
+              } else if (avatarState === "stopped") {
+                console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
             }
 
