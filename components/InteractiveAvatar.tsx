@@ -155,10 +155,10 @@ export default function InteractiveAvatar() {
 
     try {
       const token = await fetchAccessToken();
-      const tempAvatar = new StreamingAvatarApi(
+      avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: token })
       );
-      await tempAvatar.interrupt({
+      await avatar.current.interrupt({
         interruptRequest: { sessionId: data?.sessionId },
       });
       console.log("Interrupt request successful");
