@@ -19,7 +19,6 @@ import clsx from "clsx";
 import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-import movioApi from '@api/movio-api'; // Importa movioApi para interrupción
 
 const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
 const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6";
@@ -150,35 +149,20 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
-  async function handleInterrupt() {
-    if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
-      return;
-    }
-    await avatar.current
-      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
-      });
-  }
-
   async function handleCompleteInterrupt() {
     try {
-      // Fetch new token
       const token = await fetchAccessToken();
       console.log("Fetched new token:", token);
-      
-      // Initialize the API with the new token
-      movioApi.auth(token);
 
-      // Call the interruptTask function with the correct session ID
-      const response = await movioApi.interruptTask({ session_id: data?.sessionId });
-      console.log("Interrupt response:", response);
-      
-      // Check for errors
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      avatar.current = new StreamingAvatarApi(
+        new Configuration({ accessToken: token })
+      );
+
+      await avatar.current
+        .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+        .catch((e) => {
+          setDebug(e.message);
+        });
       
       console.log("Successfully interrupted the session");
     } catch (error) {
@@ -290,7 +274,6 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                // Llama a handleCompleteInterrupt aquí
                 handleCompleteInterrupt().catch((error) => console.error("Error handling complete interrupt:", error));
               } else if (avatarState === "stopped") {
                 console.log("Detecte audio mientras habla el avatar estaba en silencio");
