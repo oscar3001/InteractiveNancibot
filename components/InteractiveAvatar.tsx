@@ -217,7 +217,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyTranscriptionCount = 0;
+    let emptyCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -227,6 +227,8 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: 'nova-2',
           language: 'es',
+          interim_results: true,
+          endpointing: true,
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -239,38 +241,31 @@ export default function InteractiveAvatar() {
             console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(100);
+          mediaRecorder.current!.start(50); // Reducir tamaño del buffer
           setRecording(true);
+
+          setInterval(() => {
+            if (connection.getReadyState() === WebSocket.OPEN) {
+              connection.keepAlive();
+            }
+          }, 7000);
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          console.log("Received transcription: ", newTranscription);
 
-          // Concatenate transcription
           setInput((prevInput) => {
             const updatedInput = prevInput + "" + newTranscription;
-            console.log("Updated input: ", updatedInput);
 
-            // Check conditions for handleSubmit
-            if (checkForText(updatedInput)) {
-              console.log("First condition met: Input contains text.");
-              if (checkForConsecutiveEmpty(newTranscription)) {
-                console.log("Second condition met: consecutive empty transcriptions.");
-                setShouldSubmit(true); // Trigger the useEffect to handle submit
-              }
+            if (shouldSubmitTranscription(newTranscription)) {
+              setShouldSubmit(true);
+              handleSubmit();
             }
 
             const avatarState = localStorage.getItem("avatarState");
-            if (checkForText(updatedInput)) {
-              if (avatarState === "started") {
-                console.log("Detecte audio mientras habla el avatar");
-                //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
-                if (interruptButtonRef.current) {
-                  interruptButtonRef.current.click();
-                }
-              } else if (avatarState === "stopped") {
-                console.log("Detecte audio mientras habla el avatar estaba en silencio");
+            if (/\S/.test(updatedInput) && avatarState === "started") {
+              if (interruptButtonRef.current) {
+                interruptButtonRef.current.click();
               }
             }
 
@@ -294,30 +289,17 @@ export default function InteractiveAvatar() {
     }
   }
 
-  // Function to check if input contains any text or numbers
-  function checkForText(input) {
-    const regex = /\S/;
-    const result = regex.test(input);
-    console.log("Checking for text in input: ", input, " Result: ", result);
-    return result;
-  }
-
-  // Variable to keep track of consecutive empty transcriptions
+  // Variable para llevar un seguimiento de transcripciones vacías consecutivas
   let emptyCount = 0;
 
-  // Function to check for  consecutive empty transcriptions
-  function checkForConsecutiveEmpty(newTranscription) {
-    if (newTranscription.trim() === "") {
-      emptyCount++;
-      console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 1) {
-        emptyCount = 0;  // reset counter
-        return true;
-      }
-    } else {
-      emptyCount = 0;  // reset counter
+  // Función para verificar si se debe enviar la transcripción
+  function shouldSubmitTranscription(newTranscription) {
+    if (/\S/.test(newTranscription)) {
+      emptyCount = 0;
+      return false;
     }
-    return false;
+    emptyCount++;
+    return emptyCount >= 2;
   }
 
   return (
