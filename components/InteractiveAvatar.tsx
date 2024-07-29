@@ -217,7 +217,8 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyCount = 0;
+    let emptyTranscriptionCount = 0;
+    let timer: NodeJS.Timeout;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -241,7 +242,7 @@ export default function InteractiveAvatar() {
             console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(50); // Reducir tamaño del buffer
+          mediaRecorder.current!.start(50);
           setRecording(true);
 
           setInterval(() => {
@@ -254,13 +255,17 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
 
-          setInput((prevInput) => {
-            const updatedInput = prevInput + "" + newTranscription;
-
-            if (shouldSubmitTranscription(newTranscription)) {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            if (input.trim()) {
               setShouldSubmit(true);
               handleSubmit();
+              setInput(""); // Reset input after submitting
             }
+          }, 4000);
+
+          setInput((prevInput) => {
+            const updatedInput = prevInput + " " + newTranscription;
 
             const avatarState = localStorage.getItem("avatarState");
             if (/\S/.test(updatedInput) && avatarState === "started") {
@@ -287,19 +292,6 @@ export default function InteractiveAvatar() {
       mediaRecorder.current.stop();
       setRecording(false);
     }
-  }
-
-  // Variable para llevar un seguimiento de transcripciones vacías consecutivas
-  let emptyCount = 0;
-
-  // Función para verificar si se debe enviar la transcripción
-  function shouldSubmitTranscription(newTranscription) {
-    if (/\S/.test(newTranscription)) {
-      emptyCount = 0;
-      return false;
-    }
-    emptyCount++;
-    return emptyCount >= 2;
   }
 
   return (
