@@ -369,7 +369,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a Nancy Bot
+                Llamar a Nanci Bot
               </Button>
             </div>
           ) : (
