@@ -193,7 +193,7 @@ export default function InteractiveAvatar() {
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken); // Log token for debugging
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 200 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
       setInitialized(true); // Set initialized to true
     }
@@ -310,7 +310,7 @@ export default function InteractiveAvatar() {
     if (newTranscription.trim() === "") {
       emptyCount++;
       console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 2) {
+      if (emptyCount >= 1) {
         emptyCount = 0;  // reset counter
         return true;
       }
