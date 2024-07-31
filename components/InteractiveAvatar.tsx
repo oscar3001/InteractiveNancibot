@@ -20,7 +20,7 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
+const DEFAULT_AVATAR_ID = "default";
 const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
