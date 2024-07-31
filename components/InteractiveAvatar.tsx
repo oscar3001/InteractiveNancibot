@@ -69,19 +69,15 @@ export default function InteractiveAvatar() {
   });
 
   useEffect(() => {
-    if (shouldSubmit) {
+    if (shouldSubmit && input) {
       console.log("Conditions met, submitting...");
       console.time("Handle Submit");
       setIsLoadingChat(true);
-      if (!input) {
-        setDebug("ingrese el mensaje a enviar");
-        return;
-      }
       handleSubmit();
       setShouldSubmit(false); // Reset the flag
       console.timeEnd("Handle Submit");
     }
-  }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
+  }, [shouldSubmit, input, handleSubmit]);
 
   async function fetchAccessToken() {
     console.time("Fetch Access Token");
@@ -269,32 +265,24 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          console.log("Received transcription: ", newTranscription);
-
-          // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + "" + newTranscription;
+            const updatedInput = prevInput + " " + newTranscription;
             console.log("Updated input: ", updatedInput);
 
-            // Check conditions for handleSubmit
-            if (checkForText(updatedInput) && checkForConsecutiveEmpty(newTranscription)) {
-              console.log("Both conditions met, setting shouldSubmit to true.");
-              setShouldSubmit(true);
-              return updatedInput; // Exit early
-            }
-
-            const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
+              console.log("First condition met: Input contains text.");
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
+              }
+              const avatarState = localStorage.getItem("avatarState");
               if (avatarState === "started") {
-                console.log("Detecte audio mientras habla el avatar");
+                console.log("Detected audio while avatar is talking");
                 if (interruptButtonRef.current) {
                   interruptButtonRef.current.click();
                 }
-              } else if (avatarState === "stopped") {
-                console.log("Detecte audio mientras el avatar estaba en silencio");
               }
             }
-
             return updatedInput;
           });
         });
@@ -316,7 +304,6 @@ export default function InteractiveAvatar() {
     }
   }
 
-  // Function to check if input contains any text or numbers
   function checkForText(input) {
     const regex = /\S/;
     const result = regex.test(input);
@@ -324,10 +311,8 @@ export default function InteractiveAvatar() {
     return result;
   }
 
-  // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for  consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
@@ -403,7 +388,7 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Ingrese mensaje que se va a repetir"
+              placeholder="Inggrese mensaje que se va a repetir"
               input={text}
               onSubmit={handleSpeak}
               setInput={setText}
