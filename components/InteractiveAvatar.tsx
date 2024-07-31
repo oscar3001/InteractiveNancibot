@@ -48,6 +48,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
+      console.time("Avatar Speak");
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -55,6 +56,7 @@ export default function InteractiveAvatar() {
         .catch((e) => {
           setDebug(e.message);
         });
+      console.timeEnd("Avatar Speak");
       setIsLoadingChat(false);
     },
     initialMessages: [
@@ -69,6 +71,7 @@ export default function InteractiveAvatar() {
   useEffect(() => {
     if (shouldSubmit) {
       console.log("Conditions met, submitting...");
+      console.time("Handle Submit");
       setIsLoadingChat(true);
       if (!input) {
         setDebug("ingrese el mensaje a enviar");
@@ -76,31 +79,40 @@ export default function InteractiveAvatar() {
       }
       handleSubmit();
       setShouldSubmit(false); // Reset the flag
+      console.timeEnd("Handle Submit");
     }
   }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
 
   async function fetchAccessToken() {
+    console.time("Fetch Access Token");
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
       });
       const token = await response.text();
       console.log("Access Token:", token); // Log the token to verify
+      console.timeEnd("Fetch Access Token");
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
+      console.timeEnd("Fetch Access Token");
       return "";
     }
   }
 
   async function startSession() {
+    console.log("Starting session...");
     setIsLoadingSession(true);
+    console.time("Update Token");
     await updateToken();
+    console.timeEnd("Update Token");
+
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
       return;
     }
     try {
+      console.time("Create Start Avatar");
       const res = await avatar.current.createStartAvatar(
         {
           newSessionRequest: {
@@ -111,6 +123,7 @@ export default function InteractiveAvatar() {
         },
         setDebug
       );
+      console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
       startRecording(); // Iniciar la grabación al iniciar la sesión
@@ -155,11 +168,13 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    console.time("Interrupt Avatar");
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
+    console.timeEnd("Interrupt Avatar");
   }
 
   async function endSession() {
@@ -167,10 +182,12 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    console.time("Stop Avatar");
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: data?.sessionId } },
       setDebug
     );
+    console.timeEnd("Stop Avatar");
     setStream(undefined);
   }
 
@@ -180,22 +197,26 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    console.time("Avatar Speak Repeat");
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
+    console.timeEnd("Avatar Speak Repeat");
     setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
     async function init() {
+      console.time("Init Fetch Access Token");
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken); // Log token for debugging
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
       setInitialized(true); // Set initialized to true
+      console.timeEnd("Init Fetch Access Token");
     }
     init();
 
@@ -219,9 +240,12 @@ export default function InteractiveAvatar() {
     const deepgram = createClient(deepgramApiKey);
     let emptyTranscriptionCount = 0;
 
+    console.log("Starting recording...");
+    console.time("User Media Access");
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
+        console.timeEnd("User Media Access");
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
@@ -284,6 +308,7 @@ export default function InteractiveAvatar() {
       })
       .catch((error) => {
         console.error("Error accessing microphone:", error);
+        console.timeEnd("User Media Access");
       });
   }
 
