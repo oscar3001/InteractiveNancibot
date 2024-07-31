@@ -247,6 +247,7 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: 'nova-2',
           language: 'es',
+          utterance_end_ms: 1000,
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -269,22 +270,24 @@ export default function InteractiveAvatar() {
             const updatedInput = prevInput + " " + newTranscription;
             console.log("Updated input: ", updatedInput);
 
-            if (checkForText(updatedInput)) {
-              console.log("First condition met: Input contains text.");
-              if (checkForConsecutiveEmpty(newTranscription)) {
-                console.log("Second condition met: consecutive empty transcriptions.");
-                setShouldSubmit(true); // Trigger the useEffect to handle submit
+            const avatarState = localStorage.getItem("avatarState");
+            if (avatarState === "started") {
+              console.log("Detecte audio mientras habla el avatar");
+              //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
+              if (interruptButtonRef.current) {
+                interruptButtonRef.current.click();
               }
-              const avatarState = localStorage.getItem("avatarState");
-              if (avatarState === "started") {
-                console.log("Detected audio while avatar is talking");
-                if (interruptButtonRef.current) {
-                  interruptButtonRef.current.click();
-                }
-              }
+            } else if (avatarState === "stopped") {
+              console.log("Detecte audio mientras el avatar estaba en silencio");
             }
+
             return updatedInput;
           });
+        });
+
+        connection.on(LiveTranscriptionEvents.UtteranceEnd, () => {
+          console.log("UtteranceEnd detected, submitting input...");
+          setShouldSubmit(true);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -302,29 +305,6 @@ export default function InteractiveAvatar() {
       mediaRecorder.current.stop();
       setRecording(false);
     }
-  }
-
-  function checkForText(input) {
-    const regex = /\S/;
-    const result = regex.test(input);
-    console.log("Checking for text in input: ", input, " Result: ", result);
-    return result;
-  }
-
-  let emptyCount = 0;
-
-  function checkForConsecutiveEmpty(newTranscription) {
-    if (newTranscription.trim() === "") {
-      emptyCount++;
-      console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 1) {
-        emptyCount = 0;  // reset counter
-        return true;
-      }
-    } else {
-      emptyCount = 0;  // reset counter
-    }
-    return false;
   }
 
   return (
