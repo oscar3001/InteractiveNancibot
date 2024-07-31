@@ -242,7 +242,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true, 
-          utterance_end_ms: 1000 
+          utterance_end_ms: 500 
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -253,7 +253,7 @@ export default function InteractiveAvatar() {
             connection.finish();
             setRecording(false);
           };
-          mediaRecorder.current!.start(40);
+          mediaRecorder.current!.start(30);
           setRecording(true);
         });
 
