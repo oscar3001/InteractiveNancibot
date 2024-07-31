@@ -139,6 +139,7 @@ export default function InteractiveAvatar() {
     );
 
     const startTalkCallback = (e: any) => {
+      console.timeEnd("OpenAI to Avatar Start Talking");
       console.log("Avatar started talking", e);
       localStorage.setItem("avatarState", "started");
     };
@@ -269,6 +270,7 @@ export default function InteractiveAvatar() {
         });
 
         connection.on('UtteranceEnd', (data) => {
+          console.time("OpenAI to Avatar Start Talking");
           setShouldSubmit(true);
         });
 
