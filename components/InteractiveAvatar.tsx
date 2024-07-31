@@ -20,9 +20,9 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
-const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6";
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -38,7 +38,7 @@ export default function InteractiveAvatar() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
+  const interruptButtonRef = useRef<HTMLButtonElement>(null); 
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -69,12 +69,11 @@ export default function InteractiveAvatar() {
   });
 
   useEffect(() => {
-    if (shouldSubmit && input) {
-      console.log("Conditions met, submitting...");
+    if (shouldSubmit && input.trim() !== "") {
       console.time("Handle Submit");
       setIsLoadingChat(true);
       handleSubmit();
-      setShouldSubmit(false); // Reset the flag
+      setShouldSubmit(false); 
       console.timeEnd("Handle Submit");
     }
   }, [shouldSubmit, input, handleSubmit]);
@@ -86,7 +85,7 @@ export default function InteractiveAvatar() {
         method: "POST",
       });
       const token = await response.text();
-      console.log("Access Token:", token); // Log the token to verify
+      console.log("Access Token:", token); 
       console.timeEnd("Fetch Access Token");
       return token;
     } catch (error) {
@@ -122,7 +121,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      startRecording(); // Iniciar la grabación al iniciar la sesión
+      startRecording(); 
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
@@ -134,7 +133,7 @@ export default function InteractiveAvatar() {
 
   async function updateToken() {
     const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken); // Log token for debugging
+    console.log("Updating Access Token:", newToken); 
     avatar.current = new StreamingAvatarApi(
       new Configuration({ accessToken: newToken })
     );
@@ -153,7 +152,6 @@ export default function InteractiveAvatar() {
     avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
     avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
-    // Initialize avatar state as stopped by default
     localStorage.setItem("avatarState", "stopped");
 
     setInitialized(true);
@@ -207,11 +205,11 @@ export default function InteractiveAvatar() {
     async function init() {
       console.time("Init Fetch Access Token");
       const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken); // Log token for debugging
+      console.log("Initializing with Access Token:", newToken); 
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
-      setInitialized(true); // Set initialized to true
+      setInitialized(true); 
       console.timeEnd("Init Fetch Access Token");
     }
     init();
@@ -234,30 +232,25 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyTranscriptionCount = 0;
-
-    console.log("Starting recording...");
-    console.time("User Media Access");
+    
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
-        console.timeEnd("User Media Access");
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
           model: 'nova-2',
           language: 'es',
-          utterance_end_ms: 1000,
+          interim_results: true, 
+          utterance_end_ms: 1000 
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
-          console.log("Deepgram connection opened.");
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
           };
           mediaRecorder.current!.onstop = () => {
             connection.finish();
-            console.log("Deepgram connection closed.");
             setRecording(false);
           };
           mediaRecorder.current!.start(40);
@@ -268,25 +261,14 @@ export default function InteractiveAvatar() {
           const newTranscription = data.channel.alternatives[0].transcript;
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
-            console.log("Updated input: ", updatedInput);
-
-            const avatarState = localStorage.getItem("avatarState");
-            if (avatarState === "started") {
-              console.log("Detecte audio mientras habla el avatar");
-              //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
-              if (interruptButtonRef.current) {
-                interruptButtonRef.current.click();
-              }
-            } else if (avatarState === "stopped") {
-              console.log("Detecte audio mientras el avatar estaba en silencio");
+            if (updatedInput.trim() !== "") {
+              setShouldSubmit(false);
             }
-
             return updatedInput;
           });
         });
 
-        connection.on(LiveTranscriptionEvents.UtteranceEnd, () => {
-          console.log("UtteranceEnd detected, submitting input...");
+        connection.on('UtteranceEnd', (data) => {
           setShouldSubmit(true);
         });
 
@@ -296,7 +278,6 @@ export default function InteractiveAvatar() {
       })
       .catch((error) => {
         console.error("Error accessing microphone:", error);
-        console.timeEnd("User Media Access");
       });
   }
 
@@ -323,7 +304,7 @@ export default function InteractiveAvatar() {
               </video>
               <div className="flex flex-col gap-2 absolute bottom-3 right-3">
                 <Button
-                  ref={interruptButtonRef} // Añadir referencia aquí
+                  ref={interruptButtonRef} 
                   size="md"
                   onClick={handleInterrupt}
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
