@@ -48,7 +48,7 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      console.time("OpenAI to Avatar Start Talking");
+      console.time("Avatar Speak Start");
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -56,7 +56,7 @@ export default function InteractiveAvatar() {
         .catch((e) => {
           setDebug(e.message);
         });
-      console.timeEnd("OpenAI to Avatar Start Talking");
+      console.timeEnd("Avatar Speak Start");
 
       setIsLoadingChat(false);
     },
