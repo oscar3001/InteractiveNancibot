@@ -41,16 +41,14 @@ export default function InteractiveAvatar() {
   const interruptButtonRef = useRef<HTMLButtonElement>(null);
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
-      console.log("ChatGPT Response:", message);
+      console.log("ChatGPT Response received:", message);
 
       if (!initialized || !avatar.current) {
         setDebug("Avatar API not initialized");
         return;
       }
 
-      if (!console.timeStamp) {
-        console.time("Avatar Speak");
-      }
+      console.time("Avatar Speak Start");
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -58,9 +56,8 @@ export default function InteractiveAvatar() {
         .catch((e) => {
           setDebug(e.message);
         });
-      if (!console.timeEnd) {
-        console.timeEnd("Avatar Speak");
-      }
+      console.timeEnd("Avatar Speak Start");
+
       setIsLoadingChat(false);
     },
     initialMessages: [
@@ -74,27 +71,27 @@ export default function InteractiveAvatar() {
 
   useEffect(() => {
     if (shouldSubmit && input.trim() !== "") {
-      console.time("Handle Submit");
+      console.time("Handle Submit Start");
       setIsLoadingChat(true);
       handleSubmit();
       setShouldSubmit(false);
-      console.timeEnd("Handle Submit");
+      console.timeEnd("Handle Submit Start");
     }
   }, [shouldSubmit, input, handleSubmit]);
 
   async function fetchAccessToken() {
-    console.time("Fetch Access Token");
+    console.time("Fetch Access Token Start");
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
       });
       const token = await response.text();
-      console.log("Access Token:", token);
-      console.timeEnd("Fetch Access Token");
+      console.log("Access Token received:", token);
+      console.timeEnd("Fetch Access Token Start");
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
-      console.timeEnd("Fetch Access Token");
+      console.timeEnd("Fetch Access Token Start");
       return "";
     }
   }
@@ -102,16 +99,16 @@ export default function InteractiveAvatar() {
   async function startSession() {
     console.log("Starting session...");
     setIsLoadingSession(true);
-    console.time("Update Token");
+    console.time("Update Token Start");
     await updateToken();
-    console.timeEnd("Update Token");
+    console.timeEnd("Update Token Start");
 
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
       return;
     }
     try {
-      console.time("Create Start Avatar");
+      console.time("Create Start Avatar Start");
       const res = await avatar.current.createStartAvatar(
         {
           newSessionRequest: {
@@ -122,7 +119,7 @@ export default function InteractiveAvatar() {
         },
         setDebug
       );
-      console.timeEnd("Create Start Avatar");
+      console.timeEnd("Create Start Avatar Start");
       setData(res);
       setStream(avatar.current.mediaStream);
       startRecording();
@@ -143,6 +140,7 @@ export default function InteractiveAvatar() {
     );
 
     const startTalkCallback = (e: any) => {
+      console.timeEnd("OpenAI to Avatar Start Talking");
       console.log("Avatar started talking", e);
       localStorage.setItem("avatarState", "started");
     };
@@ -166,17 +164,13 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    if (!console.timeStamp) {
-      console.time("Interrupt Avatar");
-    }
+    console.time("Interrupt Avatar Start");
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    if (!console.timeEnd) {
-      console.timeEnd("Interrupt Avatar");
-    }
+    console.timeEnd("Interrupt Avatar Start");
   }
 
   async function endSession() {
@@ -184,16 +178,12 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    if (!console.timeStamp) {
-      console.time("Stop Avatar");
-    }
+    console.time("Stop Avatar Start");
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: data?.sessionId } },
       setDebug
     );
-    if (!console.timeEnd) {
-      console.timeEnd("Stop Avatar");
-    }
+    console.timeEnd("Stop Avatar Start");
     setStream(undefined);
   }
 
@@ -203,30 +193,26 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    if (!console.timeStamp) {
-      console.time("Avatar Speak Repeat");
-    }
+    console.time("Avatar Speak Repeat Start");
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    if (!console.timeEnd) {
-      console.timeEnd("Avatar Speak Repeat");
-    }
+    console.timeEnd("Avatar Speak Repeat Start");
     setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
     async function init() {
-      console.time("Init Fetch Access Token");
+      console.time("Init Fetch Access Token Start");
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
       setInitialized(true);
-      console.timeEnd("Init Fetch Access Token");
+      console.timeEnd("Init Fetch Access Token Start");
     }
     init();
 
@@ -275,8 +261,9 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
+          console.log("New Transcription:", newTranscription);
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
 
             if (updatedInput.trim() !== "") {
               setShouldSubmit(false);
@@ -295,6 +282,8 @@ export default function InteractiveAvatar() {
         });
 
         connection.on('UtteranceEnd', (data) => {
+          console.log("Utterance End detected");
+          console.time("OpenAI to Avatar Start Talking");
           setShouldSubmit(true);
         });
 
@@ -375,7 +364,7 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Inggrese mensaje que se va a repetir"
+              placeholder="Ingrese mensaje que se va a repetir"
               input={text}
               onSubmit={handleSpeak}
               setInput={setText}
