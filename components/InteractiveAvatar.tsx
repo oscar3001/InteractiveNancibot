@@ -17,45 +17,80 @@ import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
 import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useReducer } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
 const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
 
+const initialState = {
+  isLoadingSession: false,
+  isLoadingRepeat: false,
+  isLoadingChat: false,
+  stream: undefined,
+  debug: "",
+  data: undefined,
+  text: "",
+  initialized: false,
+  recording: false,
+  shouldSubmit: false,
+  input: "",
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case "SET_LOADING_SESSION":
+      return { ...state, isLoadingSession: action.payload };
+    case "SET_LOADING_REPEAT":
+      return { ...state, isLoadingRepeat: action.payload };
+    case "SET_LOADING_CHAT":
+      return { ...state, isLoadingChat: action.payload };
+    case "SET_STREAM":
+      return { ...state, stream: action.payload };
+    case "SET_DEBUG":
+      return { ...state, debug: action.payload };
+    case "SET_DATA":
+      return { ...state, data: action.payload };
+    case "SET_TEXT":
+      return { ...state, text: action.payload };
+    case "SET_INITIALIZED":
+      return { ...state, initialized: action.payload };
+    case "SET_RECORDING":
+      return { ...state, recording: action.payload };
+    case "SET_SHOULD_SUBMIT":
+      return { ...state, shouldSubmit: action.payload };
+    case "SET_INPUT":
+      return { ...state, input: action.payload };
+    default:
+      return state;
+  }
+}
+
 export default function InteractiveAvatar() {
-  const [isLoadingSession, setIsLoadingSession] = useState(false);
-  const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
-  const [isLoadingChat, setIsLoadingChat] = useState(false);
-  const [stream, setStream] = useState<MediaStream>();
-  const [debug, setDebug] = useState<string>();
-  const [data, setData] = useState<NewSessionData>();
-  const [text, setText] = useState<string>("");
-  const [initialized, setInitialized] = useState(false);
-  const [recording, setRecording] = useState(false);
-  const [shouldSubmit, setShouldSubmit] = useState(false);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
-  const { input, setInput, handleSubmit } = useChat({
+
+  const { input, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
 
-      if (!initialized || !avatar.current) {
-        setDebug("Avatar API not initialized");
+      if (!state.initialized || !avatar.current) {
+        dispatch({ type: "SET_DEBUG", payload: "Avatar API not initialized" });
         return;
       }
 
       await avatar.current
         .speak({
-          taskRequest: { text: message.content, sessionId: data?.sessionId },
+          taskRequest: { text: message.content, sessionId: state.data?.sessionId },
         })
         .catch((e) => {
-          setDebug(e.message);
+          dispatch({ type: "SET_DEBUG", payload: e.message });
         });
-      setIsLoadingChat(false);
+      dispatch({ type: "SET_LOADING_CHAT", payload: false });
     },
     initialMessages: [
       {
@@ -67,17 +102,17 @@ export default function InteractiveAvatar() {
   });
 
   useEffect(() => {
-    if (shouldSubmit) {
+    if (state.shouldSubmit) {
       console.log("Conditions met, submitting...");
-      setIsLoadingChat(true);
-      if (!input) {
-        setDebug("ingrese el mensaje a enviar");
+      dispatch({ type: "SET_LOADING_CHAT", payload: true });
+      if (!state.input) {
+        dispatch({ type: "SET_DEBUG", payload: "Ingrese el mensaje a enviar" });
         return;
       }
       handleSubmit();
-      setShouldSubmit(false); // Reset the flag
+      dispatch({ type: "SET_SHOULD_SUBMIT", payload: false }); // Reset the flag
     }
-  }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
+  }, [state.shouldSubmit, state.input, handleSubmit]);
 
   async function fetchAccessToken() {
     try {
@@ -94,10 +129,10 @@ export default function InteractiveAvatar() {
   }
 
   async function startSession() {
-    setIsLoadingSession(true);
+    dispatch({ type: "SET_LOADING_SESSION", payload: true });
     await updateToken();
     if (!avatar.current) {
-      setDebug("Avatar API is not initialized");
+      dispatch({ type: "SET_DEBUG", payload: "Avatar API is not initialized" });
       return;
     }
     try {
@@ -111,16 +146,14 @@ export default function InteractiveAvatar() {
         },
         setDebug
       );
-      setData(res);
-      setStream(avatar.current.mediaStream);
+      dispatch({ type: "SET_DATA", payload: res });
+      dispatch({ type: "SET_STREAM", payload: avatar.current.mediaStream });
       startRecording(); // Iniciar la grabación al iniciar la sesión
     } catch (error) {
       console.error("Error starting avatar session:", error);
-      setDebug(
-        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
-      );
+      dispatch({ type: "SET_DEBUG", payload: `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}` });
     }
-    setIsLoadingSession(false);
+    dispatch({ type: "SET_LOADING_SESSION", payload: false });
   }
 
   async function updateToken() {
@@ -147,45 +180,45 @@ export default function InteractiveAvatar() {
     // Initialize avatar state as stopped by default
     localStorage.setItem("avatarState", "stopped");
 
-    setInitialized(true);
+    dispatch({ type: "SET_INITIALIZED", payload: true });
   }
 
   async function handleInterrupt() {
-    if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+    if (!state.initialized || !avatar.current) {
+      dispatch({ type: "SET_DEBUG", payload: "Avatar API not initialized" });
       return;
     }
     await avatar.current
-      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .interrupt({ interruptRequest: { sessionId: state.data?.sessionId } })
       .catch((e) => {
-        setDebug(e.message);
+        dispatch({ type: "SET_DEBUG", payload: e.message });
       });
   }
 
   async function endSession() {
-    if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+    if (!state.initialized || !avatar.current) {
+      dispatch({ type: "SET_DEBUG", payload: "Avatar API not initialized" });
       return;
     }
     await avatar.current.stopAvatar(
-      { stopSessionRequest: { sessionId: data?.sessionId } },
+      { stopSessionRequest: { sessionId: state.data?.sessionId } },
       setDebug
     );
-    setStream(undefined);
+    dispatch({ type: "SET_STREAM", payload: undefined });
   }
 
   async function handleSpeak() {
-    setIsLoadingRepeat(true);
-    if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+    dispatch({ type: "SET_LOADING_REPEAT", payload: true });
+    if (!state.initialized || !avatar.current) {
+      dispatch({ type: "SET_DEBUG", payload: "Avatar API not initialized" });
       return;
     }
     await avatar.current
-      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
+      .speak({ taskRequest: { text: state.text, sessionId: state.data?.sessionId } })
       .catch((e) => {
-        setDebug(e.message);
+        dispatch({ type: "SET_DEBUG", payload: e.message });
       });
-    setIsLoadingRepeat(false);
+    dispatch({ type: "SET_LOADING_REPEAT", payload: false });
   }
 
   useEffect(() => {
@@ -195,7 +228,7 @@ export default function InteractiveAvatar() {
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
-      setInitialized(true); // Set initialized to true
+      dispatch({ type: "SET_INITIALIZED", payload: true });
     }
     init();
 
@@ -205,14 +238,14 @@ export default function InteractiveAvatar() {
   }, []);
 
   useEffect(() => {
-    if (stream && mediaStream.current) {
-      mediaStream.current.srcObject = stream;
+    if (state.stream && mediaStream.current) {
+      mediaStream.current.srcObject = state.stream;
       mediaStream.current.onloadedmetadata = () => {
         mediaStream.current!.play();
-        setDebug("Playing");
+        dispatch({ type: "SET_DEBUG", payload: "Playing" });
       };
     }
-  }, [mediaStream, stream]);
+  }, [state.stream]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
@@ -237,10 +270,10 @@ export default function InteractiveAvatar() {
           mediaRecorder.current!.onstop = () => {
             connection.finish();
             console.log("Deepgram connection closed.");
-            setRecording(false);
+            dispatch({ type: "SET_RECORDING", payload: false });
           };
           mediaRecorder.current!.start(40);
-          setRecording(true);
+          dispatch({ type: "SET_RECORDING", payload: true });
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
@@ -248,7 +281,7 @@ export default function InteractiveAvatar() {
           console.log("Received transcription: ", newTranscription);
 
           // Concatenate transcription
-          setInput((prevInput) => {
+          dispatch({ type: "SET_INPUT", payload: (prevInput) => {
             const updatedInput = prevInput + "" + newTranscription;
             console.log("Updated input: ", updatedInput);
 
@@ -257,7 +290,7 @@ export default function InteractiveAvatar() {
               console.log("First condition met: Input contains text.");
               if (checkForConsecutiveEmpty(newTranscription)) {
                 console.log("Second condition met: consecutive empty transcriptions.");
-                setShouldSubmit(true); // Trigger the useEffect to handle submit
+                dispatch({ type: "SET_SHOULD_SUBMIT", payload: true }); // Trigger the useEffect to handle submit
               }
             }
 
@@ -275,7 +308,7 @@ export default function InteractiveAvatar() {
             }
 
             return updatedInput;
-          });
+          }});
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -290,7 +323,7 @@ export default function InteractiveAvatar() {
   function stopRecording() {
     if (mediaRecorder.current) {
       mediaRecorder.current.stop();
-      setRecording(false);
+      dispatch({ type: "SET_RECORDING", payload: false });
     }
   }
 
@@ -305,7 +338,7 @@ export default function InteractiveAvatar() {
   // Variable to keep track of consecutive empty transcriptions
   let emptyCount = 0;
 
-  // Function to check for  consecutive empty transcriptions
+  // Function to check for consecutive empty transcriptions
   function checkForConsecutiveEmpty(newTranscription) {
     if (newTranscription.trim() === "") {
       emptyCount++;
@@ -324,7 +357,7 @@ export default function InteractiveAvatar() {
     <div className="w-full h-screen flex flex-col gap-4">
       <Card className="w-full h-full">
         <CardBody className="w-full h-full flex flex-col justify-center items-center">
-          {stream ? (
+          {state.stream ? (
             <div className="w-full h-full flex justify-center items-center relative">
               <video
                 ref={mediaStream}
@@ -354,7 +387,7 @@ export default function InteractiveAvatar() {
                 </Button>
               </div>
             </div>
-          ) : !isLoadingSession ? (
+          ) : !state.isLoadingSession ? (
             <div
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
@@ -382,46 +415,46 @@ export default function InteractiveAvatar() {
             <InteractiveAvatarTextInput
               label="Repeat"
               placeholder="Inggrese mensaje que se va a repetir"
-              input={text}
+              input={state.text}
               onSubmit={handleSpeak}
-              setInput={setText}
-              disabled={!stream}
-              loading={isLoadingRepeat}
+              setInput={(input) => dispatch({ type: "SET_TEXT", payload: input })}
+              disabled={!state.stream}
+              loading={state.isLoadingRepeat}
             />
           </div>
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Chat"
               placeholder="Escribe mensaje al avatar"
-              input={input}
+              input={state.input}
               onSubmit={() => {
-                setIsLoadingChat(true);
-                if (!input) {
-                  setDebug("Escribe mensaje al avatar");
+                dispatch({ type: "SET_LOADING_CHAT", payload: true });
+                if (!state.input) {
+                  dispatch({ type: "SET_DEBUG", payload: "Escribe mensaje al avatar" });
                   return;
                 }
                 handleSubmit();
               }}
-              setInput={setInput}
-              loading={isLoadingChat}
+              setInput={(input) => dispatch({ type: "SET_INPUT", payload: input })}
+              loading={state.isLoadingChat}
               endContent={
                 <Tooltip
-                  content={!recording ? "Inicio Escucha" : "Detener Escucha"}
+                  content={!state.recording ? "Inicio Escucha" : "Detener Escucha"}
                 >
                   <Button
-                    onClick={!recording ? startRecording : stopRecording}
-                    isDisabled={!stream}
+                    onClick={!state.recording ? startRecording : stopRecording}
+                    isDisabled={!state.stream}
                     isIconOnly
                     className={clsx(
                       "mr-4 text-white",
-                      !recording
+                      !state.recording
                         ? "bg-gradient-to-tr from-indigo-500 to-indigo-300"
                         : ""
                     )}
                     size="sm"
                     variant="shadow"
                   >
-                    {!recording ? (
+                    {!state.recording ? (
                       <Microphone size={20} />
                     ) : (
                       <>
@@ -432,7 +465,7 @@ export default function InteractiveAvatar() {
                   </Button>
                 </Tooltip>
               }
-              disabled={!stream}
+              disabled={!state.stream}
             />
           </div>
         </CardFooter>
@@ -440,7 +473,7 @@ export default function InteractiveAvatar() {
       <p className="font-mono text-right hidden">
         <span className="font-bold">Console:</span>
         <br />
-        {debug}
+        {state.debug}
       </p>
     </div>
   );
