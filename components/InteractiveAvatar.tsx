@@ -17,7 +17,7 @@ import { Microphone, MicrophoneStage } from "@phosphor-icons/react";
 import { useChat } from "ai/react";
 import clsx from "clsx";
 import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c";
@@ -157,7 +157,7 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
-  async function handleInterrupt() {
+  const handleInterrupt = useCallback(async () => {
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
@@ -169,7 +169,7 @@ export default function InteractiveAvatar() {
         setDebug(e.message);
       });
     console.timeEnd("Interrupt Avatar");
-  }
+  }, [initialized, avatar, data]);
 
   async function endSession() {
     if (!initialized || !avatar.current) {
@@ -242,7 +242,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true,
-          utterance_end_ms: 1000
+          utterance_end_ms: 1500
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -260,7 +260,7 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
 
             if (updatedInput.trim() !== "") {
               setShouldSubmit(false);
@@ -268,9 +268,7 @@ export default function InteractiveAvatar() {
 
             const avatarState = localStorage.getItem("avatarState");
             if (updatedInput.trim() !== "" && avatarState === "started") {
-              if (interruptButtonRef.current) {
-                interruptButtonRef.current.click();
-              }
+              handleInterrupt();
             }
             return updatedInput;
           });
