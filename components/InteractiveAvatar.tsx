@@ -253,7 +253,7 @@ export default function InteractiveAvatar() {
             connection.finish();
             setRecording(false);
           };
-          mediaRecorder.current!.start(30);
+          mediaRecorder.current!.start(40);
           setRecording(true);
         });
 
