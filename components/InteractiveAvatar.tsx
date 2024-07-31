@@ -38,7 +38,7 @@ export default function InteractiveAvatar() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const interruptButtonRef = useRef<HTMLButtonElement>(null); 
+  const interruptButtonRef = useRef<HTMLButtonElement>(null);
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -73,7 +73,7 @@ export default function InteractiveAvatar() {
       console.time("Handle Submit");
       setIsLoadingChat(true);
       handleSubmit();
-      setShouldSubmit(false); 
+      setShouldSubmit(false);
       console.timeEnd("Handle Submit");
     }
   }, [shouldSubmit, input, handleSubmit]);
@@ -85,7 +85,7 @@ export default function InteractiveAvatar() {
         method: "POST",
       });
       const token = await response.text();
-      console.log("Access Token:", token); 
+      console.log("Access Token:", token);
       console.timeEnd("Fetch Access Token");
       return token;
     } catch (error) {
@@ -121,7 +121,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      startRecording(); 
+      startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
@@ -133,7 +133,7 @@ export default function InteractiveAvatar() {
 
   async function updateToken() {
     const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken); 
+    console.log("Updating Access Token:", newToken);
     avatar.current = new StreamingAvatarApi(
       new Configuration({ accessToken: newToken })
     );
@@ -205,11 +205,11 @@ export default function InteractiveAvatar() {
     async function init() {
       console.time("Init Fetch Access Token");
       const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken); 
+      console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
-      setInitialized(true); 
+      setInitialized(true);
       console.timeEnd("Init Fetch Access Token");
     }
     init();
@@ -232,7 +232,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    
+
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
@@ -241,8 +241,8 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: 'nova-2',
           language: 'es',
-          interim_results: true, 
-          utterance_end_ms: 1000 
+          interim_results: true,
+          utterance_end_ms: 1000
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -261,8 +261,16 @@ export default function InteractiveAvatar() {
           const newTranscription = data.channel.alternatives[0].transcript;
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
+
             if (updatedInput.trim() !== "") {
               setShouldSubmit(false);
+            }
+
+            const avatarState = localStorage.getItem("avatarState");
+            if (updatedInput.trim() !== "" && avatarState === "started") {
+              if (interruptButtonRef.current) {
+                interruptButtonRef.current.click();
+              }
             }
             return updatedInput;
           });
@@ -304,7 +312,7 @@ export default function InteractiveAvatar() {
               </video>
               <div className="flex flex-col gap-2 absolute bottom-3 right-3">
                 <Button
-                  ref={interruptButtonRef} 
+                  ref={interruptButtonRef}
                   size="md"
                   onClick={handleInterrupt}
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
