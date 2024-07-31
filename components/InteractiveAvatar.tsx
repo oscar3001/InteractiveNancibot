@@ -277,24 +277,21 @@ export default function InteractiveAvatar() {
             console.log("Updated input: ", updatedInput);
 
             // Check conditions for handleSubmit
-            if (checkForText(updatedInput)) {
-              console.log("First condition met: Input contains text.");
-              if (checkForConsecutiveEmpty(newTranscription)) {
-                console.log("Second condition met: consecutive empty transcriptions.");
-                setShouldSubmit(true); // Trigger the useEffect to handle submit
-              }
+            if (checkForText(updatedInput) && checkForConsecutiveEmpty(newTranscription)) {
+              console.log("Both conditions met, setting shouldSubmit to true.");
+              setShouldSubmit(true);
+              return updatedInput; // Exit early
             }
 
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
-                //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
                 if (interruptButtonRef.current) {
                   interruptButtonRef.current.click();
                 }
               } else if (avatarState === "stopped") {
-                console.log("Detecte audio mientras habla el avatar estaba en silencio");
+                console.log("Detecte audio mientras el avatar estaba en silencio");
               }
             }
 
@@ -406,7 +403,7 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Inggrese mensaje que se va a repetir"
+              placeholder="Ingrese mensaje que se va a repetir"
               input={text}
               onSubmit={handleSpeak}
               setInput={setText}
