@@ -39,21 +39,28 @@ export default function InteractiveAvatar() {
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const interruptButtonRef = useRef<HTMLButtonElement>(null);
-  
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
+
       if (!initialized || !avatar.current) {
         setDebug("Avatar API not initialized");
         return;
       }
-      console.time("Avatar Speak");
-      await avatar.current.speak({
-        taskRequest: { text: message.content, sessionId: data?.sessionId },
-      }).catch((e) => {
-        setDebug(e.message);
-      });
-      console.timeEnd("Avatar Speak");
+
+      if (!console.timeStamp) {
+        console.time("Avatar Speak");
+      }
+      await avatar.current
+        .speak({
+          taskRequest: { text: message.content, sessionId: data?.sessionId },
+        })
+        .catch((e) => {
+          setDebug(e.message);
+        });
+      if (!console.timeEnd) {
+        console.timeEnd("Avatar Speak");
+      }
       setIsLoadingChat(false);
     },
     initialMessages: [
@@ -93,35 +100,39 @@ export default function InteractiveAvatar() {
   }
 
   async function startSession() {
-    console.time("Start Session");
+    console.log("Starting session...");
     setIsLoadingSession(true);
+    console.time("Update Token");
+    await updateToken();
+    console.timeEnd("Update Token");
 
+    if (!avatar.current) {
+      setDebug("Avatar API is not initialized");
+      return;
+    }
     try {
-      console.time("Update Token and Create Start Avatar");
-      const newToken = await fetchAccessToken();
-      avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken })
-      );
-
-      const res = await avatar.current.createStartAvatar({
-        newSessionRequest: {
-          quality: "low",
-          avatarName: DEFAULT_AVATAR_ID,
-          voice: { voiceId: DEFAULT_VOICE_ID },
+      console.time("Create Start Avatar");
+      const res = await avatar.current.createStartAvatar(
+        {
+          newSessionRequest: {
+            quality: "low",
+            avatarName: DEFAULT_AVATAR_ID,
+            voice: { voiceId: DEFAULT_VOICE_ID },
+          },
         },
-      });
-
+        setDebug
+      );
+      console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
       startRecording();
-      console.timeEnd("Update Token and Create Start Avatar");
     } catch (error) {
       console.error("Error starting avatar session:", error);
-      setDebug(`There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`);
+      setDebug(
+        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
+      );
     }
-
     setIsLoadingSession(false);
-    console.timeEnd("Start Session");
   }
 
   async function updateToken() {
@@ -131,23 +142,22 @@ export default function InteractiveAvatar() {
       new Configuration({ accessToken: newToken })
     );
 
-    if (!avatar.current.eventHandlersAdded) {
-      const startTalkCallback = (e) => {
-        console.log("Avatar started talking", e);
-        localStorage.setItem("avatarState", "started");
-      };
+    const startTalkCallback = (e: any) => {
+      console.log("Avatar started talking", e);
+      localStorage.setItem("avatarState", "started");
+    };
 
-      const stopTalkCallback = (e) => {
-        console.log("Avatar stopped talking", e);
-        localStorage.setItem("avatarState", "stopped");
-      };
+    const stopTalkCallback = (e: any) => {
+      console.log("Avatar stopped talking", e);
+      localStorage.setItem("avatarState", "stopped");
+    };
 
-      avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
-      avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
-      avatar.current.eventHandlersAdded = true;
-    }
+    console.log("Adding event handlers:", avatar.current);
+    avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
+    avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
     localStorage.setItem("avatarState", "stopped");
+
     setInitialized(true);
   }
 
@@ -156,12 +166,17 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.time("Interrupt Avatar");
-    await avatar.current.interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+    if (!console.timeStamp) {
+      console.time("Interrupt Avatar");
+    }
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    console.timeEnd("Interrupt Avatar");
+    if (!console.timeEnd) {
+      console.timeEnd("Interrupt Avatar");
+    }
   }
 
   async function endSession() {
@@ -169,41 +184,51 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.time("Stop Avatar");
+    if (!console.timeStamp) {
+      console.time("Stop Avatar");
+    }
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: data?.sessionId } },
       setDebug
     );
-    console.timeEnd("Stop Avatar");
+    if (!console.timeEnd) {
+      console.timeEnd("Stop Avatar");
+    }
     setStream(undefined);
   }
 
-  async function handleSpeak(text) {
+  async function handleSpeak() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.time("Avatar Speak Repeat");
-    await avatar.current.speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
+    if (!console.timeStamp) {
+      console.time("Avatar Speak Repeat");
+    }
+    await avatar.current
+      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    console.timeEnd("Avatar Speak Repeat");
+    if (!console.timeEnd) {
+      console.timeEnd("Avatar Speak Repeat");
+    }
     setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
-    async function initAvatar() {
-      console.time("Init Avatar and Fetch Access Token");
+    async function init() {
+      console.time("Init Fetch Access Token");
       const newToken = await fetchAccessToken();
+      console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
         new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
       setInitialized(true);
-      console.timeEnd("Init Avatar and Fetch Access Token");
+      console.timeEnd("Init Fetch Access Token");
     }
-    initAvatar();
+    init();
 
     return () => {
       endSession();
@@ -251,7 +276,7 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
 
             if (updatedInput.trim() !== "") {
               setShouldSubmit(false);
