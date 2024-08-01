@@ -357,7 +357,7 @@ export default function InteractiveAvatar() {
           }
 
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
 
             if (updatedInput.trim() !== "") {
               setTranscriptionDetected(true);
