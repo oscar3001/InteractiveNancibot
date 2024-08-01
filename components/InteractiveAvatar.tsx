@@ -401,7 +401,7 @@ export default function InteractiveAvatar() {
               label="Repeat"
               placeholder="Ingrese mensaje que se va a repetir"
               input={text}
-              onSubmit={handleSpeak}
+              onSubmit={handleSpeakWithTimer} // Aquí se cambia handleSpeak por handleSpeakWithTimer
               setInput={setText}
               disabled={!stream}
               loading={isLoadingRepeat}
