@@ -38,7 +38,6 @@ const REPEAT_MESSAGES = [
   "Sigue",
   "¿Algo más?",
   "¿Qué más?",
-  "Sigue, sigue",
   "cuéntame",
   "Estoy atenta",
   "Prosigue",
@@ -51,6 +50,7 @@ const INTERRUPT_MESSAGES = [
   "Perdón, ¿algo más?",
   "Perdón, ¿querías completar tu idea?",
   "Ops, ¿querías continuar?",
+  "Disculpa, dijiste algo?",
 ];
 
 export default function InteractiveAvatar() {
