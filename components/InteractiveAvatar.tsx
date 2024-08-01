@@ -239,7 +239,7 @@ export default function InteractiveAvatar() {
       setLastInterruptTime(currentTime);
     }
 
-    setTranscriptionDetected(false); // Resetear el estado de detección de transcripción
+    setTranscriptionDetected(false);
     setInterruptInProgress(false);
   }
 
@@ -306,7 +306,8 @@ export default function InteractiveAvatar() {
     // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
-      // Solo activar mensajes repetitivos si el avatar está en estado "stopped" y no hay transcripción
+
+      // Solo emitir mensajes repetitivos si el avatar está detenido y no hay transcripción en curso
       if (avatarState === "stopped" && shouldRepeat && !transcriptionDetected) {
         const randomMessage =
           REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
@@ -353,10 +354,11 @@ export default function InteractiveAvatar() {
 
             if (updatedInput.trim() !== "") {
               setTranscriptionDetected(true); // Indicar que se detectó una transcripción
+              setShouldSubmit(false);
             }
 
             const avatarState = localStorage.getItem("avatarState");
-            // Solo interrumpir si el avatar está hablando y hay transcripción
+            // Interrupt only if avatar is talking
             if (updatedInput.trim() !== "" && avatarState === "started") {
               if (interruptButtonRef.current) {
                 setTimeout(() => {
@@ -368,11 +370,9 @@ export default function InteractiveAvatar() {
           });
         });
 
-        connection.on("UtteranceEnd", () => {
-          // Al finalizar una utterancia, enviar la transcripción completa a OpenAI
-          if (input.trim() !== "") {
-            setShouldSubmit(true);
-          }
+        connection.on("UtteranceEnd", (data) => {
+          setShouldSubmit(true);
+          setTranscriptionDetected(false); // Reset transcriptionDetected after utterance ends
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
