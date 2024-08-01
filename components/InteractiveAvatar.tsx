@@ -24,6 +24,24 @@ const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4"; // Reemplaza con e
 const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855"; // Reemplaza con el ID por defecto
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
 
+// Lista de mensajes para repetir
+const REPEAT_MESSAGES = [
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
+];
+
+// Lista de mensajes para interrupción
+const INTERRUPT_MESSAGES = [
+  "palabra 1",
+  "palabra 2",
+  "palabra 3",
+  "palabra 4",
+  "palabra 5",
+];
+
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
@@ -35,6 +53,10 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
+  const [shouldRepeat, setShouldRepeat] = useState(true);
+  const [interruptInProgress, setInterruptInProgress] = useState(false);
+  const [lastInterruptTime, setLastInterruptTime] = useState(0);
+  const [transcriptionDetected, setTranscriptionDetected] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -47,6 +69,9 @@ export default function InteractiveAvatar() {
         setDebug("Avatar API not initialized");
         return;
       }
+
+      // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
+      setShouldRepeat(false);
 
       await avatar.current
         .speak({
@@ -138,6 +163,11 @@ export default function InteractiveAvatar() {
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
       localStorage.setItem("avatarState", "stopped");
+      setTimeout(() => {
+        if (localStorage.getItem("avatarState") === "stopped") {
+          setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
+        }
+      }, 4000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -151,15 +181,27 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+    const currentTime = Date.now();
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 5000) {
+      setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
+    setInterruptInProgress(true);
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
+
+    // Enviar mensaje predeterminado si hay transcripción detectada
+    if (transcriptionDetected) {
+      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+      await handleSpeak(randomInterruptMessage);
+      setTranscriptionDetected(false); // Resetear el indicador
+      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
+    }
+
+    setInterruptInProgress(false);
   }
 
   async function endSession() {
@@ -174,7 +216,7 @@ export default function InteractiveAvatar() {
     setStream(undefined);
   }
 
-  async function handleSpeak() {
+  async function handleSpeak(text: string) {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
@@ -213,6 +255,19 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
+
+  useEffect(() => {
+    // Bucle de mensajes repetidos
+    const interval = setInterval(async () => {
+      const avatarState = localStorage.getItem("avatarState");
+      if (avatarState === "stopped" && shouldRepeat) {
+        const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
+        await handleSpeak(randomMessage);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval); // Limpieza al desmontar el componente
+  }, [initialized, data?.sessionId, shouldRepeat]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
@@ -263,6 +318,7 @@ export default function InteractiveAvatar() {
 
             const avatarState = localStorage.getItem("avatarState");
             if (checkForText(updatedInput)) {
+              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
               if (avatarState === "started") {
                 console.log("Detecte audio mientras habla el avatar");
                 //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
