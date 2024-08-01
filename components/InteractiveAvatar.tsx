@@ -43,7 +43,7 @@ const REPEAT_MESSAGES = [
 ];
 
 const INTERRUPT_MESSAGES = [
-  "Cuéntame más,
+  "Cuéntame más",
   "Ya",
   "Lo escucho",
   "¿algo más?",
