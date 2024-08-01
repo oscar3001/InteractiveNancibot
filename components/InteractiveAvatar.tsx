@@ -46,7 +46,6 @@ const REPEAT_MESSAGES = [
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
   "Cuéntame más",
-  "Ya",
   "Lo escucho",
   "¿algo más?",
   "¿Ah sí?",
@@ -110,12 +109,18 @@ export default function InteractiveAvatar() {
 
   useEffect(() => {
     if (shouldSubmit) {
-      console.log("Conditions met, submitting...");
+      console.log("Conditions met, attempting to submit...");
       setIsLoadingChat(true);
-      if (!input) {
-        setDebug("ingrese el mensaje a enviar");
+
+      // Check if the input is not empty before submitting
+      if (!checkForText(input)) {
+        console.log("Submission blocked: Input is empty.");
+        setDebug("Submission blocked: Input is empty.");
+        setIsLoadingChat(false); // Reset loading state
+        setShouldSubmit(false); // Reset the flag
         return;
       }
+
       handleSubmit();
       setShouldSubmit(false); // Reset the flag
     }
@@ -324,7 +329,7 @@ export default function InteractiveAvatar() {
 
           // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
             console.log("Updated input: ", updatedInput);
 
             // Check conditions for handleSubmit
