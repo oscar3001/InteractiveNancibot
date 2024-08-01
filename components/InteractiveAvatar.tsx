@@ -24,7 +24,7 @@ const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
 const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
-const MESSAGES = [
+const REPEAT_MESSAGES = [
   "¿si?",
   "Mhm",
   "¿Es todo?",
@@ -42,6 +42,15 @@ const MESSAGES = [
   "cuéntame",
   "Estoy atenta",
   "Prosigue",
+];
+
+const INTERRUPT_MESSAGES = [
+  "perdón, querías decir algo más?",
+  "disculpa, queria decir más?",
+  "Disculpa, ¿querías continuar?",
+  "Perdón, ¿algo más?",
+  "Perdón, ¿querías completar tu idea?",
+  "Ops, ¿querías continuar?",
 ];
 
 export default function InteractiveAvatar() {
@@ -181,7 +190,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 7000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -195,7 +204,7 @@ export default function InteractiveAvatar() {
 
   async function handleInterrupt() {
     const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 5000) {
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 7000) {
       setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
@@ -214,7 +223,8 @@ export default function InteractiveAvatar() {
 
     // Enviar mensaje predeterminado si hay transcripción detectada
     if (transcriptionDetected) {
-      await handleSpeak("perdón, querías decir algo más?");
+      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+      await handleSpeak(randomInterruptMessage);
       setTranscriptionDetected(false); // Resetear el indicador
       setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
     }
@@ -293,10 +303,10 @@ export default function InteractiveAvatar() {
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
       if (avatarState === "stopped" && shouldRepeat) {
-        const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+        const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 7000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
