@@ -22,7 +22,8 @@ import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
 const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
+const BACKGROUND_IMAGE_URL =
+  "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const REPEAT_MESSAGES = [
   "¿si?",
@@ -68,7 +69,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [shouldRepeat, setShouldRepeat] = useState(true);
+  const [shouldRepeat, setShouldRepeat] = useState(false); // Inicializa en false
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
@@ -107,7 +108,8 @@ export default function InteractiveAvatar() {
       {
         id: "1",
         role: "system",
-        content: "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
+        content:
+          "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
       },
     ],
   });
@@ -165,11 +167,14 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
+      setShouldRepeat(true); // Activa los mensajes repetidos solo después de iniciar la sesión
       startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
+        `There was an error starting the session. ${
+          DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""
+        }`
       );
     }
     setIsLoadingSession(false);
@@ -235,7 +240,9 @@ export default function InteractiveAvatar() {
     const currentTime = Date.now();
     if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
       const randomInterruptMessage =
-        INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+        INTERRUPT_MESSAGES[
+          Math.floor(Math.random() * INTERRUPT_MESSAGES.length)
+        ];
       await handleSpeak(randomInterruptMessage);
       setLastInterruptTime(currentTime);
     }
@@ -260,6 +267,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Stop Avatar");
     }
     setStream(undefined);
+    setShouldRepeat(false); // Desactivar mensajes repetidos al terminar la sesión
   }
 
   async function handleSpeak(text: string) {
@@ -315,7 +323,8 @@ export default function InteractiveAvatar() {
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
       if (avatarState === "stopped" && shouldRepeat) {
-        const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
+        const randomMessage =
+          REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
     }, 7000);
@@ -333,10 +342,10 @@ export default function InteractiveAvatar() {
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
-          model: 'nova-2',
-          language: 'es',
+          model: "nova-2",
+          language: "es",
           interim_results: true,
-          utterance_end_ms: 1000
+          utterance_end_ms: 1000,
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -373,7 +382,7 @@ export default function InteractiveAvatar() {
           });
         });
 
-        connection.on('UtteranceEnd', (data) => {
+        connection.on("UtteranceEnd", (data) => {
           setShouldSubmit(true);
         });
 
@@ -432,8 +441,8 @@ export default function InteractiveAvatar() {
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
                 backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundSize: "cover",
+                backgroundPosition: "center",
               }}
             >
               <Button
