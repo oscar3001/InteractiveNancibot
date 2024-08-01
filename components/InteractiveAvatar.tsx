@@ -24,6 +24,14 @@ const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
 const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
+const MESSAGES = [
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
+];
+
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
@@ -197,7 +205,12 @@ export default function InteractiveAvatar() {
     setStream(undefined);
   }
 
-  async function handleSpeak() {
+  function getRandomMessage() {
+    const randomIndex = Math.floor(Math.random() * MESSAGES.length);
+    return MESSAGES[randomIndex];
+  }
+
+  async function handleSpeakWithTimer() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
         setDebug("Avatar API not initialized");
@@ -208,11 +221,12 @@ export default function InteractiveAvatar() {
         setIsLoadingRepeat(false);
         return;
     }
+    const randomMessage = getRandomMessage();
     if (!console.timeStamp) {
         console.time("Avatar Speak Repeat");
     }
     await avatar.current
-        .speak({ taskRequest: { text: "Mensaje predeterminado", sessionId: data?.sessionId, task_type: "repeat" } })
+        .speak({ taskRequest: { text: randomMessage, sessionId: data?.sessionId, task_mode: "sync", task_type: "repeat" } })
         .catch((e) => {
             setDebug(e.message);
         });
@@ -249,11 +263,6 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
-
-  useEffect(() => {
-    const interval = setInterval(handleSpeak, 2000);
-    return () => clearInterval(interval); // Cleanup on unmount
-  }, [initialized, data?.sessionId]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
@@ -324,6 +333,11 @@ export default function InteractiveAvatar() {
     }
   }
 
+  useEffect(() => {
+    const interval = setInterval(handleSpeakWithTimer, 2000);
+    return () => clearInterval(interval); // Limpieza al desmontar el componente
+  }, [initialized, data?.sessionId]);
+
   return (
     <div className="w-full h-screen flex flex-col gap-4">
       <Card className="w-full h-full">
@@ -385,7 +399,7 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Inggrese mensaje que se va a repetir"
+              placeholder="Ingrese mensaje que se va a repetir"
               input={text}
               onSubmit={handleSpeak}
               setInput={setText}
