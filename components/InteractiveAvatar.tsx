@@ -107,6 +107,9 @@ export default function InteractiveAvatar() {
     ],
   });
 
+  // Variable local para manejar el estado del avatar
+  let avatarState = 'stopped';
+
   useEffect(() => {
     if (shouldSubmit) {
       console.log("Conditions met, attempting to submit...");
@@ -179,14 +182,14 @@ export default function InteractiveAvatar() {
 
     const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
-      localStorage.setItem("avatarState", "started");
+      avatarState = 'started';
     };
 
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
-      localStorage.setItem("avatarState", "stopped");
+      avatarState = 'stopped';
       setTimeout(() => {
-        if (localStorage.getItem("avatarState") === "stopped") {
+        if (avatarState === 'stopped') {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
       }, 4000);
@@ -197,7 +200,7 @@ export default function InteractiveAvatar() {
     avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
     // Initialize avatar state as stopped by default
-    localStorage.setItem("avatarState", "stopped");
+    avatarState = 'stopped';
 
     setInitialized(true);
   }
@@ -281,8 +284,7 @@ export default function InteractiveAvatar() {
   useEffect(() => {
     // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
-      const avatarState = localStorage.getItem("avatarState");
-      if (avatarState === "stopped" && shouldRepeat) {
+      if (avatarState === 'stopped' && shouldRepeat) {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
@@ -336,14 +338,13 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
 
-              const avatarState = localStorage.getItem("avatarState");
-              if (avatarState === "started") {
+              if (avatarState === 'started') {
                 console.log("Detected audio while avatar is speaking");
                 // Automatically press the "Interrumpir Habla" button
                 if (interruptButtonRef.current) {
                   interruptButtonRef.current.click();
                 }
-              } else if (avatarState === "stopped") {
+              } else if (avatarState === 'stopped') {
                 console.log("Detected audio while avatar was silent");
               }
             }
