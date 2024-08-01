@@ -30,7 +30,7 @@ const REPEAT_MESSAGES = [
   "¿Es todo?",
   "¿a?",
   "Te Escucho",
-  "oquei",
+  "ok",
   "Dime",
   "¿Ajá?",
   "bueno",
@@ -67,7 +67,6 @@ export default function InteractiveAvatar() {
   const [shouldRepeat, setShouldRepeat] = useState(true);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
-  const [lastMessageTime, setLastMessageTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
@@ -191,7 +190,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 8000);
+      }, 7000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -203,37 +202,43 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
-async function handleInterrupt() {
-  if (!initialized || !avatar.current || interruptInProgress) {
-    setDebug("Avatar API not initialized or interrupt in progress");
-    return;
-  }
-  setInterruptInProgress(true);
+  async function handleInterrupt() {
+    if (!initialized || !avatar.current || interruptInProgress) {
+      setDebug("Avatar API not initialized or interrupt in progress");
+      return;
+    }
 
-  if (!console.timeStamp) {
-    console.time("Interrupt Avatar");
-  }
-  await avatar.current
-    .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-    .catch((e) => {
-      setDebug(e.message);
-    });
-  if (!console.timeEnd) {
-    console.timeEnd("Interrupt Avatar");
-  }
+    setInterruptInProgress(true);
 
-  // Enviar mensaje predeterminado si hay transcripción detectada y ha pasado suficiente tiempo
-  const currentTime = Date.now();
-  if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
-    const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
-    await handleSpeak(randomInterruptMessage);
-    setLastInterruptTime(currentTime); // Actualizar el tiempo del último mensaje predeterminado
+    console.log("Attempting to interrupt with sessionId:", data?.sessionId);
+
+    if (!console.timeStamp) {
+      console.time("Interrupt Avatar");
+    }
+    try {
+      await avatar.current.interrupt({
+        interruptRequest: { sessionId: data?.sessionId },
+      });
+    } catch (error) {
+      console.error("Error during interrupt:", error);
+      setDebug(`Interrupt failed: ${error.message}`);
+    }
+
+    if (!console.timeEnd) {
+      console.timeEnd("Interrupt Avatar");
+    }
+
+    const currentTime = Date.now();
+    if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
+      const randomInterruptMessage =
+        INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+      await handleSpeak(randomInterruptMessage);
+      setLastInterruptTime(currentTime);
+    }
+
+    setTranscriptionDetected(false);
+    setInterruptInProgress(false);
   }
-
-  setTranscriptionDetected(false); // Resetear el indicador
-  setInterruptInProgress(false);
-}
-
 
   async function endSession() {
     if (!initialized || !avatar.current) {
@@ -309,7 +314,7 @@ async function handleInterrupt() {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 8000);
+    }, 7000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
