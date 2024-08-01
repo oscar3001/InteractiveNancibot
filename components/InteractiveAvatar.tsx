@@ -84,7 +84,7 @@ export default function InteractiveAvatar() {
 
       if (!initialized || !avatar.current) {
         setDebug("Avatar API not initialized");
-        setSubmissionPending(false); // Ensure submission state is reset on error
+        setSubmissionPending(false);
         return;
       }
 
@@ -122,10 +122,13 @@ export default function InteractiveAvatar() {
       console.log("Submitting to OpenAI with input: ", input);
       console.time("Handle Submit");
       setIsLoadingChat(true);
-      setSubmissionPending(true); // Indica que una solicitud está en curso
+      setSubmissionPending(true);
       handleSubmit();
       setShouldSubmit(false);
       console.timeEnd("Handle Submit");
+    } else {
+      console.log("Submission skipped. Conditions not met.");
+      console.log("shouldSubmit:", shouldSubmit, "input:", input, "submissionPending:", submissionPending);
     }
   }, [shouldSubmit, input, handleSubmit, submissionPending]);
 
@@ -172,7 +175,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      setShouldRepeat(true); // Activa los mensajes repetidos solo después de iniciar la sesión
+      setShouldRepeat(true);
       startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
@@ -202,9 +205,9 @@ export default function InteractiveAvatar() {
       localStorage.setItem("avatarState", "stopped");
       setTimeout(() => {
         if (localStorage.getItem("avatarState") === "stopped") {
-          setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
+          setShouldRepeat(true);
         }
-      }, 12000);
+      }, 7000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -274,7 +277,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Stop Avatar");
     }
     setStream(undefined);
-    setShouldRepeat(false); // Desactivar mensajes repetidos al terminar la sesión
+    setShouldRepeat(false);
   }
 
   async function handleSpeak(text: string) {
@@ -328,7 +331,6 @@ export default function InteractiveAvatar() {
   }, [mediaStream, stream]);
 
   useEffect(() => {
-    // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
       if (avatarState === "stopped" && shouldRepeat) {
@@ -337,9 +339,9 @@ export default function InteractiveAvatar() {
         console.log("Repeating message: ", randomMessage);
         await handleSpeak(randomMessage);
       }
-    }, 12000);
+    }, 7000);
 
-    return () => clearInterval(interval); // Limpieza al desmontar el componente
+    return () => clearInterval(interval);
   }, [initialized, data?.sessionId, shouldRepeat]);
 
   function startRecording() {
@@ -380,7 +382,7 @@ export default function InteractiveAvatar() {
 
             if (updatedInput.trim() !== "") {
               console.log("Transcription detected.");
-              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
+              setTranscriptionDetected(true);
               setShouldSubmit(false);
             }
 
@@ -397,7 +399,7 @@ export default function InteractiveAvatar() {
           });
         });
 
-        connection.on("UtteranceEnd", (data) => {
+        connection.on("UtteranceEnd", () => {
           console.log("Utterance ended. Preparing to submit.");
           if (input.trim() !== "") {
             setShouldSubmit(true);
