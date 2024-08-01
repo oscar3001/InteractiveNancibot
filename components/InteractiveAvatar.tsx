@@ -69,11 +69,10 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [shouldRepeat, setShouldRepeat] = useState(false);
+  const [shouldRepeat, setShouldRepeat] = useState(false); // Inicializa en false
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
-  const [submissionPending, setSubmissionPending] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -84,28 +83,26 @@ export default function InteractiveAvatar() {
 
       if (!initialized || !avatar.current) {
         setDebug("Avatar API not initialized");
-        setSubmissionPending(false);
         return;
       }
 
+      // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
       setShouldRepeat(false);
 
-      console.log("Sending message to Avatar: ", message.content);
-      try {
-        if (!console.timeStamp) {
-          console.time("Avatar Speak");
-        }
-        await avatar.current.speak({
-          taskRequest: { text: message.content, sessionId: data?.sessionId },
-        });
-        console.timeEnd("Avatar Speak");
-      } catch (e) {
-        console.error("Error in avatar speak:", e);
-        setDebug(e.message);
+      if (!console.timeStamp) {
+        console.time("Avatar Speak");
       }
-      
+      await avatar.current
+        .speak({
+          taskRequest: { text: message.content, sessionId: data?.sessionId },
+        })
+        .catch((e) => {
+          setDebug(e.message);
+        });
+      if (!console.timeEnd) {
+        console.timeEnd("Avatar Speak");
+      }
       setIsLoadingChat(false);
-      setSubmissionPending(false);
     },
     initialMessages: [
       {
@@ -118,19 +115,14 @@ export default function InteractiveAvatar() {
   });
 
   useEffect(() => {
-    if (shouldSubmit && input.trim() !== "" && !submissionPending) {
-      console.log("Submitting to OpenAI with input: ", input);
+    if (shouldSubmit && input.trim() !== "") {
       console.time("Handle Submit");
       setIsLoadingChat(true);
-      setSubmissionPending(true);
       handleSubmit();
       setShouldSubmit(false);
       console.timeEnd("Handle Submit");
-    } else {
-      console.log("Submission skipped. Conditions not met.");
-      console.log("shouldSubmit:", shouldSubmit, "input:", input, "submissionPending:", submissionPending);
     }
-  }, [shouldSubmit, input, handleSubmit, submissionPending]);
+  }, [shouldSubmit, input, handleSubmit]);
 
   async function fetchAccessToken() {
     console.time("Fetch Access Token");
@@ -175,7 +167,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      setShouldRepeat(true);
+      setShouldRepeat(true); // Activa los mensajes repetidos solo después de iniciar la sesión
       startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
@@ -205,7 +197,7 @@ export default function InteractiveAvatar() {
       localStorage.setItem("avatarState", "stopped");
       setTimeout(() => {
         if (localStorage.getItem("avatarState") === "stopped") {
-          setShouldRepeat(true);
+          setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
       }, 7000);
     };
@@ -236,7 +228,6 @@ export default function InteractiveAvatar() {
       await avatar.current.interrupt({
         interruptRequest: { sessionId: data?.sessionId },
       });
-      console.log("Interrupt successful");
     } catch (error) {
       console.error("Error during interrupt:", error);
       setDebug(`Interrupt failed: ${error.message}`);
@@ -265,7 +256,6 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.log("Ending session...");
     if (!console.timeStamp) {
       console.time("Stop Avatar");
     }
@@ -277,7 +267,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Stop Avatar");
     }
     setStream(undefined);
-    setShouldRepeat(false);
+    setShouldRepeat(false); // Desactivar mensajes repetidos al terminar la sesión
   }
 
   async function handleSpeak(text: string) {
@@ -286,14 +276,12 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.log("Speaking: ", text);
     if (!console.timeStamp) {
       console.time("Avatar Speak Repeat");
     }
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
-        console.error("Error in repeat speak:", e);
         setDebug(e.message);
       });
     if (!console.timeEnd) {
@@ -331,17 +319,17 @@ export default function InteractiveAvatar() {
   }, [mediaStream, stream]);
 
   useEffect(() => {
+    // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
       if (avatarState === "stopped" && shouldRepeat) {
         const randomMessage =
           REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
-        console.log("Repeating message: ", randomMessage);
         await handleSpeak(randomMessage);
       }
     }, 7000);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
 
   function startRecording() {
@@ -361,14 +349,12 @@ export default function InteractiveAvatar() {
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
-          console.log("Connection to Deepgram opened.");
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
           };
           mediaRecorder.current!.onstop = () => {
             connection.finish();
             setRecording(false);
-            console.log("Recording stopped.");
           };
           mediaRecorder.current!.start(40);
           setRecording(true);
@@ -376,19 +362,16 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          console.log("Transcription received: ", newTranscription);
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
 
             if (updatedInput.trim() !== "") {
-              console.log("Transcription detected.");
-              setTranscriptionDetected(true);
+              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
               setShouldSubmit(false);
             }
 
             const avatarState = localStorage.getItem("avatarState");
             if (updatedInput.trim() !== "" && avatarState === "started") {
-              console.log("Avatar is talking, will interrupt.");
               if (interruptButtonRef.current) {
                 setTimeout(() => {
                   interruptButtonRef.current?.click();
@@ -399,11 +382,8 @@ export default function InteractiveAvatar() {
           });
         });
 
-        connection.on("UtteranceEnd", () => {
-          console.log("Utterance ended. Preparing to submit.");
-          if (input.trim() !== "") {
-            setShouldSubmit(true);
-          }
+        connection.on("UtteranceEnd", (data) => {
+          setShouldSubmit(true);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
