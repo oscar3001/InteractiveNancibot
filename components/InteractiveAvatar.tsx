@@ -26,6 +26,7 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 
 const MESSAGES = [
   "¿si?",
+  "¿es todo?",
   "Mhm",
   "¿a?",
   "Te Escucho",
@@ -177,7 +178,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 6000);
+      }, 4000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -205,6 +206,9 @@ export default function InteractiveAvatar() {
     if (!console.timeEnd) {
       console.timeEnd("Interrupt Avatar");
     }
+
+    // Enviar mensaje predeterminado al interrumpir
+    await handleSpeak("perdón, querías decir algo más?");
   }
 
   async function endSession() {
@@ -281,7 +285,7 @@ export default function InteractiveAvatar() {
         const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 6000);
+    }, 4000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
