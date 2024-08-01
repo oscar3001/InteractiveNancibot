@@ -204,7 +204,7 @@ export default function InteractiveAvatar() {
 
   async function handleInterrupt() {
     const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 7000) {
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 9000) {
       setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
