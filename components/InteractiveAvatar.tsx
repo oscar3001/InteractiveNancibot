@@ -67,6 +67,7 @@ export default function InteractiveAvatar() {
   const [shouldRepeat, setShouldRepeat] = useState(true);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
+  const [lastMessageTime, setLastMessageTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
@@ -204,11 +205,12 @@ export default function InteractiveAvatar() {
 
   async function handleInterrupt() {
     const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 12000) {
-      setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
+    if (!initialized || !avatar.current || interruptInProgress) {
+      setDebug("Avatar API not initialized or interrupt in progress");
       return;
     }
     setInterruptInProgress(true);
+
     if (!console.timeStamp) {
       console.time("Interrupt Avatar");
     }
@@ -221,12 +223,12 @@ export default function InteractiveAvatar() {
       console.timeEnd("Interrupt Avatar");
     }
 
-    // Enviar mensaje predeterminado si hay transcripción detectada
-    if (transcriptionDetected) {
+    // Enviar mensaje predeterminado si hay transcripción detectada y ha pasado suficiente tiempo
+    if (transcriptionDetected && currentTime - lastMessageTime >= 12000) {
       const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
       await handleSpeak(randomInterruptMessage);
-      setTranscriptionDetected(false); // Resetear el indicador
-      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
+      setTranscriptionDetected(false);
+      setLastMessageTime(currentTime); // Actualizar el tiempo del último mensaje
     }
 
     setInterruptInProgress(false);
