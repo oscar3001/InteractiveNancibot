@@ -24,6 +24,14 @@ const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
 const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
+const REPEAT_MESSAGES = [
+  "Mensaje predeterminado 1",
+  "Mensaje predeterminado 2",
+  "Mensaje predeterminado 3",
+  "Mensaje predeterminado 4",
+  "Mensaje predeterminado 5",
+];
+
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
@@ -35,6 +43,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
+  const [lastSpeakTime, setLastSpeakTime] = useState<number>(0);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -150,6 +159,13 @@ export default function InteractiveAvatar() {
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
       localStorage.setItem("avatarState", "stopped");
+
+      const currentTime = Date.now();
+      if (currentTime - lastSpeakTime > 5000) {
+        const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
+        handleSpeak(randomMessage);
+        setLastSpeakTime(currentTime);
+      }
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -197,7 +213,7 @@ export default function InteractiveAvatar() {
     setStream(undefined);
   }
 
-  async function handleSpeak() {
+  async function handleSpeak(message: string) {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
@@ -207,7 +223,7 @@ export default function InteractiveAvatar() {
       console.time("Avatar Speak Repeat");
     }
     await avatar.current
-      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
+      .speak({ taskRequest: { text: message, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
@@ -375,9 +391,9 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Inggrese mensaje que se va a repetir"
+              placeholder="Ingrese mensaje que se va a repetir"
               input={text}
-              onSubmit={handleSpeak}
+              onSubmit={() => handleSpeak(text)}
               setInput={setText}
               disabled={!stream}
               loading={isLoadingRepeat}
