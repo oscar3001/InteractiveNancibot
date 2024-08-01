@@ -89,9 +89,7 @@ export default function InteractiveAvatar() {
       // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
       setShouldRepeat(false);
 
-      if (!console.timeStamp) {
-        console.time("Avatar Speak");
-      }
+      console.time("Avatar Speak");
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -99,9 +97,7 @@ export default function InteractiveAvatar() {
         .catch((e) => {
           setDebug(e.message);
         });
-      if (!console.timeEnd) {
-        console.timeEnd("Avatar Speak");
-      }
+      console.timeEnd("Avatar Speak");
       setIsLoadingChat(false);
     },
     initialMessages: [
@@ -221,9 +217,7 @@ export default function InteractiveAvatar() {
 
     console.log("Attempting to interrupt with sessionId:", data?.sessionId);
 
-    if (!console.timeStamp) {
-      console.time("Interrupt Avatar");
-    }
+    console.time("Interrupt Avatar");
     try {
       await avatar.current.interrupt({
         interruptRequest: { sessionId: data?.sessionId },
@@ -233,9 +227,7 @@ export default function InteractiveAvatar() {
       setDebug(`Interrupt failed: ${error.message}`);
     }
 
-    if (!console.timeEnd) {
-      console.timeEnd("Interrupt Avatar");
-    }
+    console.timeEnd("Interrupt Avatar");
 
     const currentTime = Date.now();
     if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
@@ -256,16 +248,12 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    if (!console.timeStamp) {
-      console.time("Stop Avatar");
-    }
+    console.time("Stop Avatar");
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: data?.sessionId } },
       setDebug
     );
-    if (!console.timeEnd) {
-      console.timeEnd("Stop Avatar");
-    }
+    console.timeEnd("Stop Avatar");
     setStream(undefined);
     setShouldRepeat(false); // Desactivar mensajes repetidos al terminar la sesión
   }
@@ -276,17 +264,13 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    if (!console.timeStamp) {
-      console.time("Avatar Speak Repeat");
-    }
+    console.time("Avatar Speak Repeat");
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    if (!console.timeEnd) {
-      console.timeEnd("Avatar Speak Repeat");
-    }
+    console.timeEnd("Avatar Speak Repeat");
     setIsLoadingRepeat(false);
   }
 
@@ -362,6 +346,7 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
+          console.log("Real-time Transcription:", newTranscription);
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
 
