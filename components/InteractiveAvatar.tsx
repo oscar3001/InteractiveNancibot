@@ -22,8 +22,7 @@ import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
 const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
-const BACKGROUND_IMAGE_URL =
-  "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const REPEAT_MESSAGES = [
   "¿si?",
@@ -31,6 +30,7 @@ const REPEAT_MESSAGES = [
   "¿Es todo?",
   "¿a?",
   "Te Escucho",
+  "ok",
   "Dime",
   "¿Ajá?",
   "bueno",
@@ -38,24 +38,19 @@ const REPEAT_MESSAGES = [
   "Sigue",
   "¿Algo más?",
   "¿Qué más?",
+  "Sigue, sigue",
   "cuéntame",
   "Estoy atenta",
   "Prosigue",
 ];
 
 const INTERRUPT_MESSAGES = [
-  "Cuéntame más",
-  "Ya",
-  "Lo escucho",
-  "¿algo más?",
-  "¿Ah sí?",
-  "Comprendo",
-  "Prosigue",
-  "cuéntame",
-  "Te Escucho",
-  "entiendo",
-  "perfecto",
-  "oquei",
+  "perdón, querías decir algo más?",
+  "disculpa, queria decir más?",
+  "Disculpa, ¿querías continuar?",
+  "Perdón, ¿algo más?",
+  "Perdón, ¿querías completar tu idea?",
+  "Ops, ¿querías continuar?",
 ];
 
 export default function InteractiveAvatar() {
@@ -69,7 +64,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [shouldRepeat, setShouldRepeat] = useState(false); // Inicializa en false
+  const [shouldRepeat, setShouldRepeat] = useState(true);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
@@ -108,8 +103,7 @@ export default function InteractiveAvatar() {
       {
         id: "1",
         role: "system",
-        content:
-          "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
+        content: "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
       },
     ],
   });
@@ -167,14 +161,11 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      setShouldRepeat(true); // Activa los mensajes repetidos solo después de iniciar la sesión
       startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${
-          DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""
-        }`
+        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
       );
     }
     setIsLoadingSession(false);
@@ -199,7 +190,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 7000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -212,42 +203,32 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    if (!initialized || !avatar.current || interruptInProgress) {
-      setDebug("Avatar API not initialized or interrupt in progress");
+    const currentTime = Date.now();
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 9000) {
+      setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
-
     setInterruptInProgress(true);
-
-    console.log("Attempting to interrupt with sessionId:", data?.sessionId);
-
     if (!console.timeStamp) {
       console.time("Interrupt Avatar");
     }
-    try {
-      await avatar.current.interrupt({
-        interruptRequest: { sessionId: data?.sessionId },
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
       });
-    } catch (error) {
-      console.error("Error during interrupt:", error);
-      setDebug(`Interrupt failed: ${error.message}`);
-    }
-
     if (!console.timeEnd) {
       console.timeEnd("Interrupt Avatar");
     }
 
-    const currentTime = Date.now();
-    if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
-      const randomInterruptMessage =
-        INTERRUPT_MESSAGES[
-          Math.floor(Math.random() * INTERRUPT_MESSAGES.length)
-        ];
+    // Enviar mensaje predeterminado si hay transcripción detectada
+    if (transcriptionDetected) {
+      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
       await handleSpeak(randomInterruptMessage);
-      setLastInterruptTime(currentTime);
+      setTranscriptionDetected(false); // Resetear el indicador
+      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
     }
 
-    setTranscriptionDetected(false);
     setInterruptInProgress(false);
   }
 
@@ -267,7 +248,6 @@ export default function InteractiveAvatar() {
       console.timeEnd("Stop Avatar");
     }
     setStream(undefined);
-    setShouldRepeat(false); // Desactivar mensajes repetidos al terminar la sesión
   }
 
   async function handleSpeak(text: string) {
@@ -296,7 +276,7 @@ export default function InteractiveAvatar() {
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 90 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
       setInitialized(true);
       console.timeEnd("Init Fetch Access Token");
@@ -323,11 +303,10 @@ export default function InteractiveAvatar() {
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
       if (avatarState === "stopped" && shouldRepeat) {
-        const randomMessage =
-          REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
+        const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 7000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
@@ -342,23 +321,21 @@ export default function InteractiveAvatar() {
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
-          model: "nova-2",
-          language: "es",
+          model: 'nova-2',
+          language: 'es',
           interim_results: true,
-          utterance_end_ms: 1000,
+          utterance_end_ms: 1000
         });
-
-        // Keep Alive Implementation
-        const keepAliveInterval = setInterval(() => {
-          connection.send(""); // Send an empty message as a ping
-          console.log("Enviando Keep Alive para mantener la conexión abierta.");
-        }, 60000); // Every 60 seconds, adjust as necessary
 
         connection.on(LiveTranscriptionEvents.Open, () => {
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
           };
-          mediaRecorder.current!.start(70);
+          mediaRecorder.current!.onstop = () => {
+            connection.finish();
+            setRecording(false);
+          };
+          mediaRecorder.current!.start(40);
           setRecording(true);
         });
 
@@ -384,19 +361,13 @@ export default function InteractiveAvatar() {
           });
         });
 
-        connection.on("UtteranceEnd", (data) => {
+        connection.on('UtteranceEnd', (data) => {
           setShouldSubmit(true);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
           console.error("Deepgram error: ", error);
         });
-
-        connection.on(LiveTranscriptionEvents.Close, () => {
-          clearInterval(keepAliveInterval); // Clear the interval when connection closes
-          console.log("Conexión cerrada, se ha detenido el Keep Alive.");
-        });
-
       })
       .catch((error) => {
         console.error("Error accessing microphone:", error);
@@ -449,8 +420,8 @@ export default function InteractiveAvatar() {
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
                 backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
               }}
             >
               <Button
