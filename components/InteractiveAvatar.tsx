@@ -25,11 +25,22 @@ const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const MESSAGES = [
-  "Mensaje 1",
-  "Mensaje 2",
-  "Mensaje 3",
-  "Mensaje 4",
-  "Mensaje 5",
+  "¿si?",
+  "Mhm",
+  "¿a?",
+  "Te Escucho",
+  "ok",
+  "Dime",
+  "¿Ajá?",
+  "bueno",
+  "¿Ah?",
+  "Sigue",
+  "¿Algo más?",
+  "¿Qué más?",
+  "Sigue, sigue",
+  "cuéntame",
+  "Estoy atenta",
+  "Prosigue",
 ];
 
 export default function InteractiveAvatar() {
@@ -166,7 +177,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 4000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -270,7 +281,7 @@ export default function InteractiveAvatar() {
         const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 4000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
