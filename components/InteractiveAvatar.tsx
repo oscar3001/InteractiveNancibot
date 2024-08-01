@@ -239,7 +239,7 @@ export default function InteractiveAvatar() {
       setLastInterruptTime(currentTime);
     }
 
-    setTranscriptionDetected(false);
+    setTranscriptionDetected(false); // Resetear el estado de detección de transcripción
     setInterruptInProgress(false);
   }
 
@@ -306,7 +306,8 @@ export default function InteractiveAvatar() {
     // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
-      if (avatarState === "stopped" && shouldRepeat) {
+      // Solo activar mensajes repetitivos si el avatar está en estado "stopped" y no hay transcripción
+      if (avatarState === "stopped" && shouldRepeat && !transcriptionDetected) {
         const randomMessage =
           REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
@@ -314,7 +315,7 @@ export default function InteractiveAvatar() {
     }, 7000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
-  }, [initialized, data?.sessionId, shouldRepeat]);
+  }, [initialized, data?.sessionId, shouldRepeat, transcriptionDetected]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
@@ -356,6 +357,7 @@ export default function InteractiveAvatar() {
             }
 
             const avatarState = localStorage.getItem("avatarState");
+            // Solo interrumpir si el avatar está hablando y hay transcripción
             if (updatedInput.trim() !== "" && avatarState === "started") {
               if (interruptButtonRef.current) {
                 setTimeout(() => {
@@ -367,8 +369,11 @@ export default function InteractiveAvatar() {
           });
         });
 
-        connection.on("UtteranceEnd", (data) => {
-          setShouldSubmit(true);
+        connection.on("UtteranceEnd", () => {
+          // Asegurarse de que la transcripción se envíe a OpenAI al finalizar
+          if (input.trim() !== "") {
+            setShouldSubmit(true);
+          }
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
