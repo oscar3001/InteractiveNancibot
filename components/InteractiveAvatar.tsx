@@ -353,7 +353,6 @@ export default function InteractiveAvatar() {
 
             if (updatedInput.trim() !== "") {
               setTranscriptionDetected(true); // Indicar que se detectó una transcripción
-              setShouldSubmit(false);
             }
 
             const avatarState = localStorage.getItem("avatarState");
@@ -370,7 +369,7 @@ export default function InteractiveAvatar() {
         });
 
         connection.on("UtteranceEnd", () => {
-          // Asegurarse de que la transcripción se envíe a OpenAI al finalizar
+          // Al finalizar una utterancia, enviar la transcripción completa a OpenAI
           if (input.trim() !== "") {
             setShouldSubmit(true);
           }
