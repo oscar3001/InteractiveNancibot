@@ -190,7 +190,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 6000);
+      }, 7000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -204,7 +204,7 @@ export default function InteractiveAvatar() {
 
   async function handleInterrupt() {
     const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 9000) {
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 12000) {
       setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
@@ -306,7 +306,7 @@ export default function InteractiveAvatar() {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 6000);
+    }, 7000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
