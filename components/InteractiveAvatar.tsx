@@ -20,43 +20,9 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
-const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
-const BACKGROUND_IMAGE_URL =
-  "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
-
-const REPEAT_MESSAGES = [
-  "¿si?",
-  "Mhm",
-  "¿Es todo?",
-  "¿a?",
-  "Te Escucho",
-  "Dime",
-  "¿Ajá?",
-  "bueno",
-  "¿Ah?",
-  "Sigue",
-  "¿Algo más?",
-  "¿Qué más?",
-  "cuéntame",
-  "Estoy atenta",
-  "Prosigue",
-];
-
-const INTERRUPT_MESSAGES = [
-  "Cuéntame más",
-  "Ya",
-  "Lo escucho",
-  "¿algo más?",
-  "¿Ah sí?",
-  "Comprendo",
-  "Prosigue",
-  "cuéntame",
-  "Te Escucho",
-  "entiendo",
-  "perfecto",
-  "oquei",
-];
+const DEFAULT_AVATAR_ID = "676a3ab0273440418ceb007502ab372c"; // Reemplaza con el ID por defecto
+const DEFAULT_VOICE_ID = "3bb986b8c5c44f91a1c9b9cdb65f99b6"; // Reemplaza con el ID por defecto
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -69,15 +35,10 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [shouldRepeat, setShouldRepeat] = useState(false);
-  const [interruptInProgress, setInterruptInProgress] = useState(false);
-  const [lastInterruptTime, setLastInterruptTime] = useState(0);
-  const [transcriptionDetected, setTranscriptionDetected] = useState(false);
-  const [consecutiveEmptyTranscriptions, setConsecutiveEmptyTranscriptions] = useState(0);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const interruptButtonRef = useRef<HTMLButtonElement>(null);
+  const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -87,9 +48,6 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      setShouldRepeat(false);
-
-      console.time("Avatar Speak");
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -97,59 +55,52 @@ export default function InteractiveAvatar() {
         .catch((e) => {
           setDebug(e.message);
         });
-      console.timeEnd("Avatar Speak");
       setIsLoadingChat(false);
     },
     initialMessages: [
       {
         id: "1",
         role: "system",
-        content:
-          "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
+        content: "eres Nancibot un avatar sommelier experto en vinos y recomendaciones, responderas de manera muy breve y amigable al usuario estas en una videollamada, pero no puedes realizar ninguna accion solo responder preguntas. asle preguntas al usuario para conocer sus gustos y mantener la conversacion fluida.",
       },
     ],
   });
 
   useEffect(() => {
-    if (shouldSubmit && input.trim() !== "") {
-      console.time("Handle Submit");
+    if (shouldSubmit) {
+      console.log("Conditions met, submitting...");
       setIsLoadingChat(true);
+      if (!input) {
+        setDebug("ingrese el mensaje a enviar");
+        return;
+      }
       handleSubmit();
-      setShouldSubmit(false);
-      console.timeEnd("Handle Submit");
+      setShouldSubmit(false); // Reset the flag
     }
-  }, [shouldSubmit, input, handleSubmit]);
+  }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
 
   async function fetchAccessToken() {
-    console.time("Fetch Access Token");
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
       });
       const token = await response.text();
-      console.log("Access Token:", token);
-      console.timeEnd("Fetch Access Token");
+      console.log("Access Token:", token); // Log the token to verify
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
-      console.timeEnd("Fetch Access Token");
       return "";
     }
   }
 
   async function startSession() {
-    console.log("Starting session...");
     setIsLoadingSession(true);
-    console.time("Update Token");
     await updateToken();
-    console.timeEnd("Update Token");
-
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
       return;
     }
     try {
-      console.time("Create Start Avatar");
       const res = await avatar.current.createStartAvatar(
         {
           newSessionRequest: {
@@ -160,17 +111,13 @@ export default function InteractiveAvatar() {
         },
         setDebug
       );
-      console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      setShouldRepeat(true);
-      startRecording();
+      startRecording(); // Iniciar la grabación al iniciar la sesión
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
-        `There was an error starting the session. ${
-          DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""
-        }`
+        `There was an error starting the session. ${DEFAULT_VOICE_ID ? "This custom voice ID may not be supported." : ""}`
       );
     }
     setIsLoadingSession(false);
@@ -178,7 +125,7 @@ export default function InteractiveAvatar() {
 
   async function updateToken() {
     const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken);
+    console.log("Updating Access Token:", newToken); // Log token for debugging
     avatar.current = new StreamingAvatarApi(
       new Configuration({ accessToken: newToken })
     );
@@ -191,56 +138,28 @@ export default function InteractiveAvatar() {
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
       localStorage.setItem("avatarState", "stopped");
-      setTimeout(() => {
-        if (localStorage.getItem("avatarState") === "stopped") {
-          setShouldRepeat(true);
-        }
-      }, 7000);
     };
 
     console.log("Adding event handlers:", avatar.current);
     avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
     avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
+    // Initialize avatar state as stopped by default
     localStorage.setItem("avatarState", "stopped");
 
     setInitialized(true);
   }
 
   async function handleInterrupt() {
-    if (!initialized || !avatar.current || interruptInProgress) {
-      setDebug("Avatar API not initialized or interrupt in progress");
+    if (!initialized || !avatar.current) {
+      setDebug("Avatar API not initialized");
       return;
     }
-
-    setInterruptInProgress(true);
-
-    console.log("Attempting to interrupt with sessionId:", data?.sessionId);
-
-    console.time("Interrupt Avatar");
-    try {
-      await avatar.current.interrupt({
-        interruptRequest: { sessionId: data?.sessionId },
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
       });
-    } catch (error) {
-      console.error("Error during interrupt:", error);
-      setDebug(`Interrupt failed: ${error.message}`);
-    }
-
-    console.timeEnd("Interrupt Avatar");
-
-    const currentTime = Date.now();
-    if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
-      const randomInterruptMessage =
-        INTERRUPT_MESSAGES[
-          Math.floor(Math.random() * INTERRUPT_MESSAGES.length)
-        ];
-      await handleSpeak(randomInterruptMessage);
-      setLastInterruptTime(currentTime);
-    }
-
-    setTranscriptionDetected(false);
-    setInterruptInProgress(false);
   }
 
   async function endSession() {
@@ -248,42 +167,35 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.time("Stop Avatar");
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: data?.sessionId } },
       setDebug
     );
-    console.timeEnd("Stop Avatar");
     setStream(undefined);
-    setShouldRepeat(false);
   }
 
-  async function handleSpeak(text: string) {
+  async function handleSpeak() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
     }
-    console.time("Avatar Speak Repeat");
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    console.timeEnd("Avatar Speak Repeat");
     setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
     async function init() {
-      console.time("Init Fetch Access Token");
       const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken);
+      console.log("Initializing with Access Token:", newToken); // Log token for debugging
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 60 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 200 })
       );
-      setInitialized(true);
-      console.timeEnd("Init Fetch Access Token");
+      setInitialized(true); // Set initialized to true
     }
     init();
 
@@ -302,22 +214,10 @@ export default function InteractiveAvatar() {
     }
   }, [mediaStream, stream]);
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const avatarState = localStorage.getItem("avatarState");
-      if (avatarState === "stopped" && shouldRepeat) {
-        const randomMessage =
-          REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
-        await handleSpeak(randomMessage);
-      }
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [initialized, data?.sessionId, shouldRepeat]);
-
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
+    let emptyTranscriptionCount = 0;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -325,62 +225,57 @@ export default function InteractiveAvatar() {
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
-          model: "nova-2",
-          language: "es",
-          interim_results: true,
-          utterance_end_ms: 1000,
+          model: 'nova-2',
+          language: 'es',
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
+          console.log("Deepgram connection opened.");
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
           };
           mediaRecorder.current!.onstop = () => {
             connection.finish();
+            console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(40);
+          mediaRecorder.current!.start(100);
           setRecording(true);
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          console.log("Real-time Transcription:", newTranscription);
+          console.log("Received transcription: ", newTranscription);
 
-          const regex = /[a-zA-Z0-9]/;
-
-          if (regex.test(newTranscription)) {
-            setConsecutiveEmptyTranscriptions(0);
-            setTranscriptionDetected(true);
-          } else {
-            setConsecutiveEmptyTranscriptions((prev) => prev + 1);
-          }
-
+          // Concatenate transcription
           setInput((prevInput) => {
             const updatedInput = prevInput + "" + newTranscription;
+            console.log("Updated input: ", updatedInput);
 
-            if (updatedInput.trim() !== "") {
-              setTranscriptionDetected(true);
-              setShouldSubmit(false);
+            // Check conditions for handleSubmit
+            if (checkForText(updatedInput)) {
+              console.log("First condition met: Input contains text.");
+              if (checkForConsecutiveEmpty(newTranscription)) {
+                console.log("Second condition met: consecutive empty transcriptions.");
+                setShouldSubmit(true); // Trigger the useEffect to handle submit
+              }
             }
 
             const avatarState = localStorage.getItem("avatarState");
-            if (updatedInput.trim() !== "" && avatarState === "started") {
-              if (interruptButtonRef.current) {
-                setTimeout(() => {
-                  interruptButtonRef.current?.click();
-                }, 0);
+            if (checkForText(updatedInput)) {
+              if (avatarState === "started") {
+                console.log("Detecte audio mientras habla el avatar");
+                //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
+                if (interruptButtonRef.current) {
+                  interruptButtonRef.current.click();
+                }
+              } else if (avatarState === "stopped") {
+                console.log("Detecte audio mientras habla el avatar estaba en silencio");
               }
             }
+
             return updatedInput;
           });
-        });
-
-        connection.on("UtteranceEnd", (data) => {
-          if (consecutiveEmptyTranscriptions >= 2) {
-            console.log("Consecutive empty transcriptions detected. Forcing submit.");
-            setShouldSubmit(true);
-          }
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -399,6 +294,32 @@ export default function InteractiveAvatar() {
     }
   }
 
+  // Function to check if input contains any text or numbers
+  function checkForText(input) {
+    const regex = /\S/;
+    const result = regex.test(input);
+    console.log("Checking for text in input: ", input, " Result: ", result);
+    return result;
+  }
+
+  // Variable to keep track of consecutive empty transcriptions
+  let emptyCount = 0;
+
+  // Function to check for  consecutive empty transcriptions
+  function checkForConsecutiveEmpty(newTranscription) {
+    if (newTranscription.trim() === "") {
+      emptyCount++;
+      console.log("Empty transcription received. Empty count: ", emptyCount);
+      if (emptyCount >= 1) {
+        emptyCount = 0;  // reset counter
+        return true;
+      }
+    } else {
+      emptyCount = 0;  // reset counter
+    }
+    return false;
+  }
+
   return (
     <div className="w-full h-screen flex flex-col gap-4">
       <Card className="w-full h-full">
@@ -415,7 +336,7 @@ export default function InteractiveAvatar() {
               </video>
               <div className="flex flex-col gap-2 absolute bottom-3 right-3">
                 <Button
-                  ref={interruptButtonRef}
+                  ref={interruptButtonRef} // Añadir referencia aquí
                   size="md"
                   onClick={handleInterrupt}
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
@@ -438,8 +359,8 @@ export default function InteractiveAvatar() {
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
                 backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
               }}
             >
               <Button
@@ -448,7 +369,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a Nanci Bot
+                Llamar a Nancy Bot
               </Button>
             </div>
           ) : (
@@ -460,9 +381,9 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Ingrese mensaje que se va a repetir"
+              placeholder="Inggrese mensaje que se va a repetir"
               input={text}
-              onSubmit={() => handleSpeak(text)}
+              onSubmit={handleSpeak}
               setInput={setText}
               disabled={!stream}
               loading={isLoadingRepeat}
