@@ -57,6 +57,7 @@ export default function InteractiveAvatar() {
   const [shouldSubmit, setShouldSubmit] = useState(false);
   const [shouldRepeat, setShouldRepeat] = useState(true);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
+  const [lastTranscription, setLastTranscription] = useState<string>("");
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -209,8 +210,11 @@ export default function InteractiveAvatar() {
       console.timeEnd("Interrupt Avatar");
     }
 
-    // Enviar mensaje predeterminado al interrumpir
-    await handleSpeak("perdón, querías decir algo más?");
+    // Enviar mensaje predeterminado al interrumpir si hay al menos una palabra en la transcripción
+    if (lastTranscription.trim().split(/\s+/).length > 0) {
+      await handleSpeak("perdón, querías decir algo más?");
+    }
+
     setInterruptInProgress(false);
   }
 
@@ -323,6 +327,7 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
+          setLastTranscription(newTranscription); // Almacenar última transcripción
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
 
