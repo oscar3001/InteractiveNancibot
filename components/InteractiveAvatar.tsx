@@ -296,7 +296,7 @@ export default function InteractiveAvatar() {
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 60 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 90 })
       );
       setInitialized(true);
       console.timeEnd("Init Fetch Access Token");
@@ -348,15 +348,17 @@ export default function InteractiveAvatar() {
           utterance_end_ms: 1000,
         });
 
+        // Keep Alive Implementation
+        const keepAliveInterval = setInterval(() => {
+          connection.send(""); // Send an empty message as a ping
+          console.log("Enviando Keep Alive para mantener la conexión abierta.");
+        }, 60000); // Every 60 seconds, adjust as necessary
+
         connection.on(LiveTranscriptionEvents.Open, () => {
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
           };
-          mediaRecorder.current!.onstop = () => {
-            connection.finish();
-            setRecording(false);
-          };
-          mediaRecorder.current!.start(40);
+          mediaRecorder.current!.start(70);
           setRecording(true);
         });
 
@@ -389,6 +391,12 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Error, (error) => {
           console.error("Deepgram error: ", error);
         });
+
+        connection.on(LiveTranscriptionEvents.Close, () => {
+          clearInterval(keepAliveInterval); // Clear the interval when connection closes
+          console.log("Conexión cerrada, se ha detenido el Keep Alive.");
+        });
+
       })
       .catch((error) => {
         console.error("Error accessing microphone:", error);
