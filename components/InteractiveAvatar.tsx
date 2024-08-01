@@ -25,11 +25,11 @@ const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const MESSAGES = [
-  "te escucho",
-  "Ok",
-  "Mm",
-  "ajam",
-  "¿si?",
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
 ];
 
 export default function InteractiveAvatar() {
@@ -43,11 +43,11 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
+  const [shouldRepeat, setShouldRepeat] = useState(true);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const interruptButtonRef = useRef<HTMLButtonElement>(null);
-  const pendingMessage = useRef<string | null>(null); // Para almacenar mensajes pendientes de OpenAI
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -57,7 +57,8 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      pendingMessage.current = message.content; // Almacenar mensaje pendiente
+      // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
+      setShouldRepeat(false);
 
       if (!console.timeStamp) {
         console.time("Avatar Speak");
@@ -161,12 +162,11 @@ export default function InteractiveAvatar() {
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
       localStorage.setItem("avatarState", "stopped");
-
-      // Enviar mensaje pendiente de OpenAI si existe
-      if (pendingMessage.current) {
-        handleSpeak(pendingMessage.current);
-        pendingMessage.current = null;
-      }
+      setTimeout(() => {
+        if (localStorage.getItem("avatarState") === "stopped") {
+          setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
+        }
+      }, 4000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -214,39 +214,24 @@ export default function InteractiveAvatar() {
     setStream(undefined);
   }
 
-  function getRandomMessage() {
-    const randomIndex = Math.floor(Math.random() * MESSAGES.length);
-    return MESSAGES[randomIndex];
-  }
-
-  async function handleSpeak(message: string) {
+  async function handleSpeak(text: string) {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
       setDebug("Avatar API not initialized");
       return;
     }
-    const avatarState = localStorage.getItem("avatarState");
-    if (avatarState !== "stopped") {
-      setIsLoadingRepeat(false);
-      return;
-    }
     if (!console.timeStamp) {
-      console.time("Avatar Speak");
+      console.time("Avatar Speak Repeat");
     }
     await avatar.current
-      .speak({ taskRequest: { text: message, sessionId: data?.sessionId, task_mode: "sync", task_type: "repeat" } })
+      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
     if (!console.timeEnd) {
-      console.timeEnd("Avatar Speak");
+      console.timeEnd("Avatar Speak Repeat");
     }
     setIsLoadingRepeat(false);
-  }
-
-  async function handleSpeakWithTimer() {
-    const randomMessage = getRandomMessage();
-    await handleSpeak(randomMessage);
   }
 
   useEffect(() => {
@@ -276,6 +261,19 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
+
+  useEffect(() => {
+    // Bucle de mensajes repetidos
+    const interval = setInterval(async () => {
+      const avatarState = localStorage.getItem("avatarState");
+      if (avatarState === "stopped" && shouldRepeat) {
+        const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
+        await handleSpeak(randomMessage);
+      }
+    }, 4000);
+
+    return () => clearInterval(interval); // Limpieza al desmontar el componente
+  }, [initialized, data?.sessionId, shouldRepeat]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
@@ -346,11 +344,6 @@ export default function InteractiveAvatar() {
     }
   }
 
-  useEffect(() => {
-    const interval = setInterval(handleSpeakWithTimer, 4000);
-    return () => clearInterval(interval); // Limpieza al desmontar el componente
-  }, [initialized, data?.sessionId]);
-
   return (
     <div className="w-full h-screen flex flex-col gap-4">
       <Card className="w-full h-full">
@@ -414,7 +407,7 @@ export default function InteractiveAvatar() {
               label="Repeat"
               placeholder="Ingrese mensaje que se va a repetir"
               input={text}
-              onSubmit={handleSpeakWithTimer} // Aquí se cambia handleSpeak por handleSpeakWithTimer
+              onSubmit={() => handleSpeak(text)}
               setInput={setText}
               disabled={!stream}
               loading={isLoadingRepeat}
