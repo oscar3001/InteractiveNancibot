@@ -200,19 +200,24 @@ export default function InteractiveAvatar() {
   async function handleSpeak() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
-      return;
+        setDebug("Avatar API not initialized");
+        return;
+    }
+    const avatarState = localStorage.getItem("avatarState");
+    if (avatarState !== "stopped") {
+        setIsLoadingRepeat(false);
+        return;
     }
     if (!console.timeStamp) {
-      console.time("Avatar Speak Repeat");
+        console.time("Avatar Speak Repeat");
     }
     await avatar.current
-      .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
-      });
+        .speak({ taskRequest: { text: "Mensaje predeterminado", sessionId: data?.sessionId, task_type: "repeat" } })
+        .catch((e) => {
+            setDebug(e.message);
+        });
     if (!console.timeEnd) {
-      console.timeEnd("Avatar Speak Repeat");
+        console.timeEnd("Avatar Speak Repeat");
     }
     setIsLoadingRepeat(false);
   }
@@ -244,6 +249,11 @@ export default function InteractiveAvatar() {
       };
     }
   }, [mediaStream, stream]);
+
+  useEffect(() => {
+    const interval = setInterval(handleSpeak, 2000);
+    return () => clearInterval(interval); // Cleanup on unmount
+  }, [initialized, data?.sessionId]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
