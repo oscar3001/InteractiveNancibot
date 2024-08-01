@@ -69,7 +69,7 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [shouldRepeat, setShouldRepeat] = useState(false); // Inicializa en false
+  const [shouldRepeat, setShouldRepeat] = useState(false);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
@@ -84,27 +84,26 @@ export default function InteractiveAvatar() {
 
       if (!initialized || !avatar.current) {
         setDebug("Avatar API not initialized");
+        setSubmissionPending(false); // Ensure submission state is reset on error
         return;
       }
 
-      // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
       setShouldRepeat(false);
 
       console.log("Sending message to Avatar: ", message.content);
-      if (!console.timeStamp) {
-        console.time("Avatar Speak");
-      }
-      await avatar.current
-        .speak({
+      try {
+        if (!console.timeStamp) {
+          console.time("Avatar Speak");
+        }
+        await avatar.current.speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
-        })
-        .catch((e) => {
-          console.error("Error in avatar speak:", e);
-          setDebug(e.message);
         });
-      if (!console.timeEnd) {
         console.timeEnd("Avatar Speak");
+      } catch (e) {
+        console.error("Error in avatar speak:", e);
+        setDebug(e.message);
       }
+      
       setIsLoadingChat(false);
       setSubmissionPending(false);
     },
@@ -400,7 +399,9 @@ export default function InteractiveAvatar() {
 
         connection.on("UtteranceEnd", (data) => {
           console.log("Utterance ended. Preparing to submit.");
-          setShouldSubmit(true);
+          if (input.trim() !== "") {
+            setShouldSubmit(true);
+          }
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
