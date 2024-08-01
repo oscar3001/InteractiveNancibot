@@ -46,6 +46,7 @@ const REPEAT_MESSAGES = [
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
   "Cuéntame más",
+  "Ya",
   "Lo escucho",
   "¿algo más?",
   "¿Ah sí?",
@@ -288,7 +289,7 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let emptyTranscriptionCount = 0;
+    let timeoutId: NodeJS.Timeout;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -318,36 +319,38 @@ export default function InteractiveAvatar() {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Received transcription: ", newTranscription);
 
+          // Reset timer on new transcription
+          clearTimeout(timeoutId);
+
           // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + "" + newTranscription;
+            const updatedInput = prevInput + " " + newTranscription;
             console.log("Updated input: ", updatedInput);
 
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
-              if (checkForConsecutiveEmpty(newTranscription)) {
-                console.log("Second condition met: consecutive empty transcriptions.");
-                setShouldSubmit(true); // Trigger the useEffect to handle submit
-              }
-            }
 
-            const avatarState = localStorage.getItem("avatarState");
-            if (checkForText(updatedInput)) {
-              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
+              const avatarState = localStorage.getItem("avatarState");
               if (avatarState === "started") {
-                console.log("Detecte audio mientras habla el avatar");
-                //AQUI QUIERO PRESIONAR EL BOTON AUTOMATICAMENTE "INTERRUMPIR HABLA"
+                console.log("Detected audio while avatar is speaking");
+                // Automatically press the "Interrumpir Habla" button
                 if (interruptButtonRef.current) {
                   interruptButtonRef.current.click();
                 }
               } else if (avatarState === "stopped") {
-                console.log("Detecte audio mientras habla el avatar estaba en silencio");
+                console.log("Detected audio while avatar was silent");
               }
             }
 
             return updatedInput;
           });
+
+          // Start timer to check for no transcription
+          timeoutId = setTimeout(() => {
+            console.log("No transcription received for 1 second. Submitting...");
+            setShouldSubmit(true); // Trigger the useEffect to handle submit
+          }, 1000);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -372,24 +375,6 @@ export default function InteractiveAvatar() {
     const result = regex.test(input);
     console.log("Checking for text in input: ", input, " Result: ", result);
     return result;
-  }
-
-  // Variable to keep track of consecutive empty transcriptions
-  let emptyCount = 0;
-
-  // Function to check for  consecutive empty transcriptions
-  function checkForConsecutiveEmpty(newTranscription) {
-    if (newTranscription.trim() === "") {
-      emptyCount++;
-      console.log("Empty transcription received. Empty count: ", emptyCount);
-      if (emptyCount >= 1) {
-        emptyCount = 0;  // reset counter
-        return true;
-      }
-    } else {
-      emptyCount = 0;  // reset counter
-    }
-    return false;
   }
 
   return (
