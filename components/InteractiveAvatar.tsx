@@ -26,8 +26,8 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 
 const MESSAGES = [
   "¿si?",
-  "¿es todo?",
   "Mhm",
+  "¿Es todo?",
   "¿a?",
   "Te Escucho",
   "ok",
@@ -56,6 +56,7 @@ export default function InteractiveAvatar() {
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
   const [shouldRepeat, setShouldRepeat] = useState(true);
+  const [interruptInProgress, setInterruptInProgress] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -191,10 +192,11 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+    if (!initialized || !avatar.current || interruptInProgress) {
+      setDebug("Avatar API not initialized or interrupt in progress");
       return;
     }
+    setInterruptInProgress(true);
     if (!console.timeStamp) {
       console.time("Interrupt Avatar");
     }
@@ -209,6 +211,7 @@ export default function InteractiveAvatar() {
 
     // Enviar mensaje predeterminado al interrumpir
     await handleSpeak("perdón, querías decir algo más?");
+    setInterruptInProgress(false);
   }
 
   async function endSession() {
