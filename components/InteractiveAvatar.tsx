@@ -180,7 +180,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 4000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -292,7 +292,7 @@ export default function InteractiveAvatar() {
         const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 4000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
