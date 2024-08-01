@@ -1,4 +1,4 @@
-import { AVATARS, VOICES } from "@/app/lib/constants";
+mport { AVATARS, VOICES } from "@/app/lib/constants";
 import {
   Configuration,
   NewSessionData,
@@ -30,7 +30,7 @@ const REPEAT_MESSAGES = [
   "¿Es todo?",
   "¿a?",
   "Te Escucho",
-  "ok",
+  "oquei",
   "Dime",
   "¿Ajá?",
   "bueno",
