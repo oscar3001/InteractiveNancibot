@@ -203,36 +203,37 @@ export default function InteractiveAvatar() {
     setInitialized(true);
   }
 
-  async function handleInterrupt() {
-    const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress) {
-      setDebug("Avatar API not initialized or interrupt in progress");
-      return;
-    }
-    setInterruptInProgress(true);
-
-    if (!console.timeStamp) {
-      console.time("Interrupt Avatar");
-    }
-    await avatar.current
-      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
-      });
-    if (!console.timeEnd) {
-      console.timeEnd("Interrupt Avatar");
-    }
-
-    // Enviar mensaje predeterminado si hay transcripción detectada y ha pasado suficiente tiempo
-    if (transcriptionDetected && currentTime - lastMessageTime >= 12000) {
-      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
-      await handleSpeak(randomInterruptMessage);
-      setTranscriptionDetected(false);
-      setLastMessageTime(currentTime); // Actualizar el tiempo del último mensaje
-    }
-
-    setInterruptInProgress(false);
+async function handleInterrupt() {
+  if (!initialized || !avatar.current || interruptInProgress) {
+    setDebug("Avatar API not initialized or interrupt in progress");
+    return;
   }
+  setInterruptInProgress(true);
+
+  if (!console.timeStamp) {
+    console.time("Interrupt Avatar");
+  }
+  await avatar.current
+    .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+    .catch((e) => {
+      setDebug(e.message);
+    });
+  if (!console.timeEnd) {
+    console.timeEnd("Interrupt Avatar");
+  }
+
+  // Enviar mensaje predeterminado si hay transcripción detectada y ha pasado suficiente tiempo
+  const currentTime = Date.now();
+  if (transcriptionDetected && currentTime - lastInterruptTime >= 12000) {
+    const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+    await handleSpeak(randomInterruptMessage);
+    setLastInterruptTime(currentTime); // Actualizar el tiempo del último mensaje predeterminado
+  }
+
+  setTranscriptionDetected(false); // Resetear el indicador
+  setInterruptInProgress(false);
+}
+
 
   async function endSession() {
     if (!initialized || !avatar.current) {
