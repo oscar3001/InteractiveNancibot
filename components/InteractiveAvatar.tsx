@@ -46,7 +46,6 @@ const REPEAT_MESSAGES = [
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
   "Cuéntame más",
-  "Ya",
   "Lo escucho",
   "¿algo más?",
   "¿Ah sí?",
@@ -77,6 +76,7 @@ export default function InteractiveAvatar() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -108,19 +108,9 @@ export default function InteractiveAvatar() {
   });
 
   useEffect(() => {
-    if (shouldSubmit) {
-      console.log("Conditions met, attempting to submit...");
+    if (shouldSubmit && input.trim() !== "") {
+      console.log("Conditions met, submitting...");
       setIsLoadingChat(true);
-
-      // Check if the input is not empty before submitting
-      if (!checkForText(input)) {
-        console.log("Submission blocked: Input is empty.");
-        setDebug("Submission blocked: Input is empty.");
-        setIsLoadingChat(false); // Reset loading state
-        setShouldSubmit(false); // Reset the flag
-        return;
-      }
-
       handleSubmit();
       setShouldSubmit(false); // Reset the flag
     }
@@ -209,20 +199,19 @@ export default function InteractiveAvatar() {
       return;
     }
     setInterruptInProgress(true);
+    await avatar.current
+      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
+      .catch((e) => {
+        setDebug(e.message);
+      });
 
-    try {
-      await avatar.current.interrupt({ interruptRequest: { sessionId: data?.sessionId } });
-      console.log("Interrupt successful");
-    } catch (e) {
-      setDebug(`Interrupt error: ${e.message}`);
-      console.error("Interrupt error:", e);
+    // Enviar mensaje predeterminado si hay transcripción detectada
+    if (transcriptionDetected) {
+      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+      await handleSpeak(randomInterruptMessage);
+      setTranscriptionDetected(false); // Resetear el indicador
+      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
     }
-
-    // Send a random interrupt message
-    const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
-    await handleSpeak(randomInterruptMessage);
-    setTranscriptionDetected(false); // Resetear el indicador
-    setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
 
     setInterruptInProgress(false);
   }
@@ -237,9 +226,6 @@ export default function InteractiveAvatar() {
       setDebug
     );
     setStream(undefined);
-
-    // Reset avatar state to stopped
-    localStorage.setItem("avatarState", "stopped");
   }
 
   async function handleSpeak(text: string) {
@@ -264,9 +250,6 @@ export default function InteractiveAvatar() {
         new Configuration({ accessToken: newToken, jitterBuffer: 80 })
       );
       setInitialized(true); // Set initialized to true
-
-      // Set initial avatar state to stopped
-      localStorage.setItem("avatarState", "stopped");
     }
     init();
 
@@ -346,7 +329,10 @@ export default function InteractiveAvatar() {
               const avatarState = localStorage.getItem("avatarState");
               if (avatarState === "started") {
                 console.log("Detected audio while avatar is speaking");
-                handleInterrupt(); // Call interrupt function directly
+                // Automatically press the "Interrumpir Habla" button
+                if (interruptButtonRef.current) {
+                  interruptButtonRef.current.click();
+                }
               } else if (avatarState === "stopped") {
                 console.log("Detected audio while avatar was silent");
               }
@@ -357,8 +343,12 @@ export default function InteractiveAvatar() {
 
           // Start timer to check for no transcription
           timeoutId = setTimeout(() => {
-            console.log("No transcription received for 1 second. Submitting...");
-            setShouldSubmit(true); // Trigger the useEffect to handle submit
+            console.log("No transcription received for 1 second. Checking input for submission...");
+            if (input.trim() !== "") {
+              setShouldSubmit(true); // Trigger the useEffect to handle submit
+            } else {
+              console.log("No valid input to submit.");
+            }
           }, 1000);
         });
 
@@ -402,8 +392,9 @@ export default function InteractiveAvatar() {
               </video>
               <div className="flex flex-col gap-2 absolute bottom-3 right-3">
                 <Button
+                  ref={interruptButtonRef} // Añadir referencia aquí
                   size="md"
-                  onClick={handleInterrupt} // Call the function directly
+                  onClick={handleInterrupt}
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
