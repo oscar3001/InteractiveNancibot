@@ -26,20 +26,37 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 
 // Lista de mensajes para repetir
 const REPEAT_MESSAGES = [
-  "Mensaje 1",
-  "Mensaje 2",
-  "Mensaje 3",
-  "Mensaje 4",
-  "Mensaje 5",
+  "¿si?",
+  "Mhm",
+  "¿Es todo?",
+  "¿a?",
+  "Te Escucho",
+  "Dime",
+  "¿Ajá?",
+  "bueno",
+  "¿Ah?",
+  "Sigue",
+  "¿Algo más?",
+  "¿Qué más?",
+  "cuéntame",
+  "Estoy atenta",
+  "Prosigue",
 ];
 
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
-  "palabra 1",
-  "palabra 2",
-  "palabra 3",
-  "palabra 4",
-  "palabra 5",
+  "Cuéntame más",
+  "Ya",
+  "Lo escucho",
+  "¿algo más?",
+  "¿Ah sí?",
+  "Comprendo",
+  "Prosigue",
+  "cuéntame",
+  "Te Escucho",
+  "entiendo",
+  "perfecto",
+  "oquei",
 ];
 
 export default function InteractiveAvatar() {
@@ -220,6 +237,9 @@ export default function InteractiveAvatar() {
       setDebug
     );
     setStream(undefined);
+
+    // Reset avatar state to stopped
+    localStorage.setItem("avatarState", "stopped");
   }
 
   async function handleSpeak(text: string) {
@@ -244,6 +264,9 @@ export default function InteractiveAvatar() {
         new Configuration({ accessToken: newToken, jitterBuffer: 80 })
       );
       setInitialized(true); // Set initialized to true
+
+      // Set initial avatar state to stopped
+      localStorage.setItem("avatarState", "stopped");
     }
     init();
 
