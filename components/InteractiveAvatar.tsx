@@ -25,11 +25,11 @@ const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const MESSAGES = [
-  "Mensaje 1",
-  "Mensaje 2",
-  "Mensaje 3",
-  "Mensaje 4",
-  "Mensaje 5",
+  "mm",
+  "aja",
+  "ok",
+  "te escucho",
+  "¿si?",
 ];
 
 export default function InteractiveAvatar() {
@@ -334,7 +334,7 @@ export default function InteractiveAvatar() {
   }
 
   useEffect(() => {
-    const interval = setInterval(handleSpeakWithTimer, 2000);
+    const interval = setInterval(handleSpeakWithTimer, 4000);
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId]);
 
