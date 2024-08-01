@@ -193,7 +193,7 @@ export default function InteractiveAvatar() {
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken); // Log token for debugging
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 200 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 80 })
       );
       setInitialized(true); // Set initialized to true
     }
@@ -239,7 +239,7 @@ export default function InteractiveAvatar() {
             console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(100);
+          mediaRecorder.current!.start(50);
           setRecording(true);
         });
 
