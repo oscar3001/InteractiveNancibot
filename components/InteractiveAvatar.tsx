@@ -26,36 +26,20 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 
 // Lista de mensajes para repetir
 const REPEAT_MESSAGES = [
-  "¿si?",
-  "Mhm",
-  "¿Es todo?",
-  "¿a?",
-  "Te Escucho",
-  "Dime",
-  "¿Ajá?",
-  "bueno",
-  "¿Ah?",
-  "Sigue",
-  "¿Algo más?",
-  "¿Qué más?",
-  "cuéntame",
-  "Estoy atenta",
-  "Prosigue",
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
 ];
 
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
-  "Cuéntame más",
-  "Lo escucho",
-  "¿algo más?",
-  "¿Ah sí?",
-  "Comprendo",
-  "Prosigue",
-  "cuéntame",
-  "Te Escucho",
-  "entiendo",
-  "perfecto",
-  "oquei",
+  "palabra 1",
+  "palabra 2",
+  "palabra 3",
+  "palabra 4",
+  "palabra 5",
 ];
 
 export default function InteractiveAvatar() {
@@ -77,6 +61,7 @@ export default function InteractiveAvatar() {
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
+  const inputRef = useRef<string>(""); // New ref to store the latest input
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -321,6 +306,7 @@ export default function InteractiveAvatar() {
           setInput((prevInput) => {
             const updatedInput = prevInput + "" + newTranscription;
             console.log("Updated input: ", updatedInput);
+            inputRef.current = updatedInput; // Update the ref with the latest input
 
             // Check conditions for handleSubmit
             if (checkForText(updatedInput)) {
@@ -344,7 +330,7 @@ export default function InteractiveAvatar() {
           // Start timer to check for no transcription
           timeoutId = setTimeout(() => {
             console.log("No transcription received for 1 second. Checking input for submission...");
-            if (input.trim() !== "") {
+            if (inputRef.current.trim() !== "") { // Use the ref here
               setShouldSubmit(true); // Trigger the useEffect to handle submit
             } else {
               console.log("No valid input to submit.");
