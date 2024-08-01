@@ -26,36 +26,20 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 
 // Lista de mensajes para repetir
 const REPEAT_MESSAGES = [
-  "¿si?",
-  "Mhm",
-  "¿Es todo?",
-  "¿a?",
-  "Te Escucho",
-  "Dime",
-  "¿Ajá?",
-  "bueno",
-  "¿Ah?",
-  "Sigue",
-  "¿Algo más?",
-  "¿Qué más?",
-  "cuéntame",
-  "Estoy atenta",
-  "Prosigue",
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
 ];
 
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
-  "Cuéntame más",
-  "Lo escucho",
-  "¿algo más?",
-  "¿Ah sí?",
-  "Comprendo",
-  "Prosigue",
-  "cuéntame",
-  "Te Escucho",
-  "entiendo",
-  "perfecto",
-  "oquei",
+  "palabra 1",
+  "palabra 2",
+  "palabra 3",
+  "palabra 4",
+  "palabra 5",
 ];
 
 export default function InteractiveAvatar() {
@@ -76,7 +60,6 @@ export default function InteractiveAvatar() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -106,9 +89,6 @@ export default function InteractiveAvatar() {
       },
     ],
   });
-
-  // Variable local para manejar el estado del avatar
-  let avatarState = 'stopped';
 
   useEffect(() => {
     if (shouldSubmit) {
@@ -182,14 +162,14 @@ export default function InteractiveAvatar() {
 
     const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
-      avatarState = 'started';
+      localStorage.setItem("avatarState", "started");
     };
 
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
-      avatarState = 'stopped';
+      localStorage.setItem("avatarState", "stopped");
       setTimeout(() => {
-        if (avatarState === 'stopped') {
+        if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
       }, 4000);
@@ -200,7 +180,7 @@ export default function InteractiveAvatar() {
     avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
     // Initialize avatar state as stopped by default
-    avatarState = 'stopped';
+    localStorage.setItem("avatarState", "stopped");
 
     setInitialized(true);
   }
@@ -212,19 +192,20 @@ export default function InteractiveAvatar() {
       return;
     }
     setInterruptInProgress(true);
-    await avatar.current
-      .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
-      .catch((e) => {
-        setDebug(e.message);
-      });
 
-    // Enviar mensaje predeterminado si hay transcripción detectada
-    if (transcriptionDetected) {
-      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
-      await handleSpeak(randomInterruptMessage);
-      setTranscriptionDetected(false); // Resetear el indicador
-      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
+    try {
+      await avatar.current.interrupt({ interruptRequest: { sessionId: data?.sessionId } });
+      console.log("Interrupt successful");
+    } catch (e) {
+      setDebug(`Interrupt error: ${e.message}`);
+      console.error("Interrupt error:", e);
     }
+
+    // Send a random interrupt message
+    const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+    await handleSpeak(randomInterruptMessage);
+    setTranscriptionDetected(false); // Resetear el indicador
+    setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
 
     setInterruptInProgress(false);
   }
@@ -284,7 +265,8 @@ export default function InteractiveAvatar() {
   useEffect(() => {
     // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
-      if (avatarState === 'stopped' && shouldRepeat) {
+      const avatarState = localStorage.getItem("avatarState");
+      if (avatarState === "stopped" && shouldRepeat) {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
@@ -338,13 +320,11 @@ export default function InteractiveAvatar() {
             if (checkForText(updatedInput)) {
               console.log("First condition met: Input contains text.");
 
-              if (avatarState === 'started') {
+              const avatarState = localStorage.getItem("avatarState");
+              if (avatarState === "started") {
                 console.log("Detected audio while avatar is speaking");
-                // Automatically press the "Interrumpir Habla" button
-                if (interruptButtonRef.current) {
-                  interruptButtonRef.current.click();
-                }
-              } else if (avatarState === 'stopped') {
+                handleInterrupt(); // Call interrupt function directly
+              } else if (avatarState === "stopped") {
                 console.log("Detected audio while avatar was silent");
               }
             }
@@ -399,9 +379,8 @@ export default function InteractiveAvatar() {
               </video>
               <div className="flex flex-col gap-2 absolute bottom-3 right-3">
                 <Button
-                  ref={interruptButtonRef} // Añadir referencia aquí
                   size="md"
-                  onClick={handleInterrupt}
+                  onClick={handleInterrupt} // Call the function directly
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
                   variant="shadow"
                 >
