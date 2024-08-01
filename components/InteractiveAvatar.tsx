@@ -69,10 +69,11 @@ export default function InteractiveAvatar() {
   const [initialized, setInitialized] = useState(false);
   const [recording, setRecording] = useState(false);
   const [shouldSubmit, setShouldSubmit] = useState(false);
-  const [shouldRepeat, setShouldRepeat] = useState(false); // Inicializa en false
+  const [shouldRepeat, setShouldRepeat] = useState(false);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
+  const [consecutiveEmptyTranscriptions, setConsecutiveEmptyTranscriptions] = useState(0);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -86,7 +87,6 @@ export default function InteractiveAvatar() {
         return;
       }
 
-      // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
       setShouldRepeat(false);
 
       console.time("Avatar Speak");
@@ -163,7 +163,7 @@ export default function InteractiveAvatar() {
       console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      setShouldRepeat(true); // Activa los mensajes repetidos solo después de iniciar la sesión
+      setShouldRepeat(true);
       startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
@@ -193,7 +193,7 @@ export default function InteractiveAvatar() {
       localStorage.setItem("avatarState", "stopped");
       setTimeout(() => {
         if (localStorage.getItem("avatarState") === "stopped") {
-          setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
+          setShouldRepeat(true);
         }
       }, 7000);
     };
@@ -255,7 +255,7 @@ export default function InteractiveAvatar() {
     );
     console.timeEnd("Stop Avatar");
     setStream(undefined);
-    setShouldRepeat(false); // Desactivar mensajes repetidos al terminar la sesión
+    setShouldRepeat(false);
   }
 
   async function handleSpeak(text: string) {
@@ -303,20 +303,17 @@ export default function InteractiveAvatar() {
   }, [mediaStream, stream]);
 
   useEffect(() => {
-    // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
-
-      // Solo emitir mensajes repetitivos si el avatar está detenido y no hay transcripción en curso
-      if (avatarState === "stopped" && shouldRepeat && !transcriptionDetected) {
+      if (avatarState === "stopped" && shouldRepeat) {
         const randomMessage =
           REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
     }, 7000);
 
-    return () => clearInterval(interval); // Limpieza al desmontar el componente
-  }, [initialized, data?.sessionId, shouldRepeat, transcriptionDetected]);
+    return () => clearInterval(interval);
+  }, [initialized, data?.sessionId, shouldRepeat]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
@@ -349,16 +346,25 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           console.log("Real-time Transcription:", newTranscription);
+
+          const regex = /[a-zA-Z0-9]/;
+
+          if (regex.test(newTranscription)) {
+            setConsecutiveEmptyTranscriptions(0);
+            setTranscriptionDetected(true);
+          } else {
+            setConsecutiveEmptyTranscriptions((prev) => prev + 1);
+          }
+
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
 
             if (updatedInput.trim() !== "") {
-              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
+              setTranscriptionDetected(true);
               setShouldSubmit(false);
             }
 
             const avatarState = localStorage.getItem("avatarState");
-            // Interrupt only if avatar is talking
             if (updatedInput.trim() !== "" && avatarState === "started") {
               if (interruptButtonRef.current) {
                 setTimeout(() => {
@@ -371,8 +377,10 @@ export default function InteractiveAvatar() {
         });
 
         connection.on("UtteranceEnd", (data) => {
-          setShouldSubmit(true);
-          setTranscriptionDetected(false); // Reset transcriptionDetected after utterance ends
+          if (consecutiveEmptyTranscriptions >= 2) {
+            console.log("Consecutive empty transcriptions detected. Forcing submit.");
+            setShouldSubmit(true);
+          }
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
