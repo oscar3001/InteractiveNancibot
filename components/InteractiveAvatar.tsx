@@ -73,6 +73,7 @@ export default function InteractiveAvatar() {
   const [interruptInProgress, setInterruptInProgress] = useState(false);
   const [lastInterruptTime, setLastInterruptTime] = useState(0);
   const [transcriptionDetected, setTranscriptionDetected] = useState(false);
+  const [submissionPending, setSubmissionPending] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -105,6 +106,7 @@ export default function InteractiveAvatar() {
         console.timeEnd("Avatar Speak");
       }
       setIsLoadingChat(false);
+      setSubmissionPending(false);
     },
     initialMessages: [
       {
@@ -117,15 +119,16 @@ export default function InteractiveAvatar() {
   });
 
   useEffect(() => {
-    if (shouldSubmit && input.trim() !== "") {
+    if (shouldSubmit && input.trim() !== "" && !submissionPending) {
       console.log("Submitting to OpenAI with input: ", input);
       console.time("Handle Submit");
       setIsLoadingChat(true);
+      setSubmissionPending(true); // Indica que una solicitud está en curso
       handleSubmit();
       setShouldSubmit(false);
       console.timeEnd("Handle Submit");
     }
-  }, [shouldSubmit, input, handleSubmit]);
+  }, [shouldSubmit, input, handleSubmit, submissionPending]);
 
   async function fetchAccessToken() {
     console.time("Fetch Access Token");
