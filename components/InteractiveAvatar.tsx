@@ -30,7 +30,6 @@ const REPEAT_MESSAGES = [
   "¿Es todo?",
   "¿a?",
   "Te Escucho",
-  "ok",
   "Dime",
   "¿Ajá?",
   "bueno",
@@ -44,13 +43,18 @@ const REPEAT_MESSAGES = [
 ];
 
 const INTERRUPT_MESSAGES = [
-  "perdón, querías decir algo más?",
-  "disculpa, queria decir más?",
-  "Disculpa, ¿querías continuar?",
-  "Perdón, ¿algo más?",
-  "Perdón, ¿querías completar tu idea?",
-  "Ops, ¿querías continuar?",
-  "Disculpa, dijiste algo?",
+  "Cuéntame más,
+  "Ya",
+  "Lo escucho",
+  "¿algo más?",
+  "¿Ah sí?",
+  "Comprendo",
+  "Prosigue",
+  "cuéntame",
+  "Te Escucho",
+  "entiendo",
+  "perfecto",
+  "oquei",
 ];
 
 export default function InteractiveAvatar() {
