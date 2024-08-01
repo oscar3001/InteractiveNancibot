@@ -25,23 +25,11 @@ const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const MESSAGES = [
-  "¿si?",
-  "Mhm",
-  "¿Es todo?",
-  "¿a?",
-  "Te Escucho",
-  "ok",
-  "Dime",
-  "¿Ajá?",
-  "bueno",
-  "¿Ah?",
-  "Sigue",
-  "¿Algo más?",
-  "¿Qué más?",
-  "Sigue, sigue",
-  "cuéntame",
-  "Estoy atenta",
-  "Prosigue",
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
 ];
 
 export default function InteractiveAvatar() {
@@ -57,7 +45,8 @@ export default function InteractiveAvatar() {
   const [shouldSubmit, setShouldSubmit] = useState(false);
   const [shouldRepeat, setShouldRepeat] = useState(true);
   const [interruptInProgress, setInterruptInProgress] = useState(false);
-  const [lastTranscription, setLastTranscription] = useState<string>("");
+  const [lastInterruptTime, setLastInterruptTime] = useState(0);
+  const [transcriptionDetected, setTranscriptionDetected] = useState(false);
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
@@ -180,7 +169,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 6000);
+      }, 4000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -193,8 +182,9 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    if (!initialized || !avatar.current || interruptInProgress) {
-      setDebug("Avatar API not initialized or interrupt in progress");
+    const currentTime = Date.now();
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 5000) {
+      setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
     setInterruptInProgress(true);
@@ -210,9 +200,11 @@ export default function InteractiveAvatar() {
       console.timeEnd("Interrupt Avatar");
     }
 
-    // Enviar mensaje predeterminado al interrumpir si hay al menos una palabra en la transcripción
-    if (lastTranscription.trim().split(/\s+/).length > 0) {
+    // Enviar mensaje predeterminado si hay transcripción detectada
+    if (transcriptionDetected) {
       await handleSpeak("perdón, querías decir algo más?");
+      setTranscriptionDetected(false); // Resetear el indicador
+      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
     }
 
     setInterruptInProgress(false);
@@ -292,7 +284,7 @@ export default function InteractiveAvatar() {
         const randomMessage = MESSAGES[Math.floor(Math.random() * MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 6000);
+    }, 4000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
@@ -327,11 +319,11 @@ export default function InteractiveAvatar() {
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          setLastTranscription(newTranscription); // Almacenar última transcripción
           setInput((prevInput) => {
             const updatedInput = prevInput + " " + newTranscription;
 
             if (updatedInput.trim() !== "") {
+              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
               setShouldSubmit(false);
             }
 
