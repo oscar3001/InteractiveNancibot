@@ -25,10 +25,10 @@ const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
 const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
 const MESSAGES = [
-  "mm",
-  "aja",
-  "ok",
   "te escucho",
+  "Ok",
+  "Mm",
+  "ajam",
   "¿si?",
 ];
 
@@ -47,6 +47,7 @@ export default function InteractiveAvatar() {
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const interruptButtonRef = useRef<HTMLButtonElement>(null);
+  const pendingMessage = useRef<string | null>(null); // Para almacenar mensajes pendientes de OpenAI
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -55,6 +56,8 @@ export default function InteractiveAvatar() {
         setDebug("Avatar API not initialized");
         return;
       }
+
+      pendingMessage.current = message.content; // Almacenar mensaje pendiente
 
       if (!console.timeStamp) {
         console.time("Avatar Speak");
@@ -158,6 +161,12 @@ export default function InteractiveAvatar() {
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
       localStorage.setItem("avatarState", "stopped");
+
+      // Enviar mensaje pendiente de OpenAI si existe
+      if (pendingMessage.current) {
+        handleSpeak(pendingMessage.current);
+        pendingMessage.current = null;
+      }
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -210,30 +219,34 @@ export default function InteractiveAvatar() {
     return MESSAGES[randomIndex];
   }
 
-  async function handleSpeakWithTimer() {
+  async function handleSpeak(message: string) {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
-        setDebug("Avatar API not initialized");
-        return;
+      setDebug("Avatar API not initialized");
+      return;
     }
     const avatarState = localStorage.getItem("avatarState");
     if (avatarState !== "stopped") {
-        setIsLoadingRepeat(false);
-        return;
+      setIsLoadingRepeat(false);
+      return;
     }
-    const randomMessage = getRandomMessage();
     if (!console.timeStamp) {
-        console.time("Avatar Speak Repeat");
+      console.time("Avatar Speak");
     }
     await avatar.current
-        .speak({ taskRequest: { text: randomMessage, sessionId: data?.sessionId, task_mode: "sync", task_type: "repeat" } })
-        .catch((e) => {
-            setDebug(e.message);
-        });
+      .speak({ taskRequest: { text: message, sessionId: data?.sessionId, task_mode: "sync", task_type: "repeat" } })
+      .catch((e) => {
+        setDebug(e.message);
+      });
     if (!console.timeEnd) {
-        console.timeEnd("Avatar Speak Repeat");
+      console.timeEnd("Avatar Speak");
     }
     setIsLoadingRepeat(false);
+  }
+
+  async function handleSpeakWithTimer() {
+    const randomMessage = getRandomMessage();
+    await handleSpeak(randomMessage);
   }
 
   useEffect(() => {
