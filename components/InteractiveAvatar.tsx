@@ -332,7 +332,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true,
-          utterance_end_ms: 1300
+          utterance_end_ms: 1000
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
