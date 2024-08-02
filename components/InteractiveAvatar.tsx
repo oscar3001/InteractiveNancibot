@@ -29,18 +29,21 @@ const REPEAT_MESSAGES = [
   "Mhm",
   "¿Es todo?",
   "¿a?",
-  "Te Escucho",
-  "ok",
+  "Mhm",
   "Dime",
   "¿Ajá?",
-  "bueno",
   "¿Ah?",
   "Sigue",
   "¿Algo más?",
+  "Mhm",
+  "Mhm",
+  "Mhm",
+  "Mhm",
+  "Mhm",
+  "Mhm",
+  "Mhm",
   "¿Qué más?",
-  "Sigue, sigue",
   "cuéntame",
-  "Estoy atenta",
   "Prosigue",
 ];
 
@@ -199,7 +202,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 8000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -327,7 +330,7 @@ export default function InteractiveAvatar() {
         await handleSpeak(randomMessage);
         console.log("Mensaje repetitivo enviado:", randomMessage);
       }
-    }, 8000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat, interruptInProgress]);
