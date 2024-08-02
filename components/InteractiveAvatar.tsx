@@ -295,7 +295,7 @@ export default function InteractiveAvatar() {
       const newToken = await fetchAccessToken();
       console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 60 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 90 })
       );
       setInitialized(true);
       console.timeEnd("Init Fetch Access Token");
