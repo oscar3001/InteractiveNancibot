@@ -72,7 +72,7 @@ export default function InteractiveAvatar() {
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const interruptButtonRef = useRef<HTMLButtonElement>(null);
-  const [emptyTranscriptionTimer, setEmptyTranscriptionTimer] = useState<NodeJS.Timeout | null>(null);
+  const emptyTranscriptionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
@@ -339,7 +339,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true,
-          utterance_end_ms: 1400
+          utterance_end_ms: 1000
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -363,28 +363,24 @@ export default function InteractiveAvatar() {
 
             if (/\S/.test(newTranscription)) {
               console.log("Transcripción contiene texto, reiniciando temporizador");
-              if (emptyTranscriptionTimer) {
-                clearTimeout(emptyTranscriptionTimer);
+              if (emptyTranscriptionTimerRef.current) {
+                clearTimeout(emptyTranscriptionTimerRef.current);
               }
               setTranscriptionDetected(true); // Indicar que se detectó una transcripción
               setShouldSubmit(false);
               // Reiniciar el temporizador al recibir texto
-              setEmptyTranscriptionTimer(
-                setTimeout(() => {
-                  console.log("Temporizador alcanzado, forzando envío de transcripción");
-                  setShouldSubmit(true);
-                }, 2000)
-              );
+              emptyTranscriptionTimerRef.current = setTimeout(() => {
+                console.log("Temporizador alcanzado, forzando envío de transcripción");
+                setShouldSubmit(true);
+              }, 2000);
             } else {
               // Si la transcripción está vacía y el temporizador no está en marcha, iniciar el temporizador
-              if (!emptyTranscriptionTimer) {
+              if (!emptyTranscriptionTimerRef.current) {
                 console.log("Iniciando temporizador de 2 segundos para transcripciones vacías");
-                setEmptyTranscriptionTimer(
-                  setTimeout(() => {
-                    console.log("Temporizador alcanzado, forzando envío de transcripción");
-                    setShouldSubmit(true);
-                  }, 2000)
-                );
+                emptyTranscriptionTimerRef.current = setTimeout(() => {
+                  console.log("Temporizador alcanzado, forzando envío de transcripción");
+                  setShouldSubmit(true);
+                }, 2000);
               }
             }
 
