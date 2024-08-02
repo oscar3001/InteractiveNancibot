@@ -45,12 +45,18 @@ const REPEAT_MESSAGES = [
 ];
 
 const INTERRUPT_MESSAGES = [
-  "perdón, querías decir algo más?",
-  "disculpa, queria decir más?",
-  "Disculpa, ¿querías continuar?",
-  "Perdón, ¿algo más?",
-  "Perdón, ¿querías completar tu idea?",
-  "Ops, ¿querías continuar?",
+  "Cuéntame más",
+  "Ya",
+  "Lo escucho",
+  "¿algo más?",
+  "¿Ah sí?",
+  "Comprendo",
+  "Prosigue",
+  "cuéntame",
+  "Te Escucho",
+  "entiendo",
+  "perfecto",
+  "oquei",
 ];
 
 export default function InteractiveAvatar() {
@@ -193,7 +199,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 6000);
+      }, 8000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -233,7 +239,7 @@ export default function InteractiveAvatar() {
     if (transcriptionDetected) {
       console.log("Transcripción detectada, preparando mensaje de interrupción...");
       const currentTime = Date.now();
-      if (currentTime - lastInterruptTime >= 9000) {
+      if (currentTime - lastInterruptTime >= 10000) {
         const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
         await handleSpeak(randomInterruptMessage);
         setLastInterruptTime(currentTime); // Actualizar el tiempo del último mensaje de interrupción
@@ -321,7 +327,7 @@ export default function InteractiveAvatar() {
         await handleSpeak(randomMessage);
         console.log("Mensaje repetitivo enviado:", randomMessage);
       }
-    }, 6000);
+    }, 8000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat, interruptInProgress]);
@@ -339,7 +345,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true,
-          utterance_end_ms: 1000
+          utterance_end_ms: 1300
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
