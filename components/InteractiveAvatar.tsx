@@ -97,6 +97,8 @@ export default function InteractiveAvatar() {
       console.log("Conditions met, submitting...");
       setIsLoadingChat(true);
       handleSubmit();
+      setInput(""); // Reset input after submission
+      inputRef.current = ""; // Reset the ref as well
       setShouldSubmit(false); // Reset the flag
     }
   }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
@@ -277,8 +279,8 @@ export default function InteractiveAvatar() {
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
-          model: 'nova-2',
-          language: 'es',
+          model: "nova-2",
+          language: "es",
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -308,29 +310,15 @@ export default function InteractiveAvatar() {
             console.log("Updated input: ", updatedInput);
             inputRef.current = updatedInput; // Update the ref with the latest input
 
-            // Check conditions for handleSubmit
-            if (checkForText(updatedInput)) {
-              console.log("First condition met: Input contains text.");
-
-              const avatarState = localStorage.getItem("avatarState");
-              if (avatarState === "started") {
-                console.log("Detected audio while avatar is speaking");
-                // Automatically press the "Interrumpir Habla" button
-                if (interruptButtonRef.current) {
-                  interruptButtonRef.current.click();
-                }
-              } else if (avatarState === "stopped") {
-                console.log("Detected audio while avatar was silent");
-              }
-            }
-
             return updatedInput;
           });
 
           // Start timer to check for no transcription
           timeoutId = setTimeout(() => {
-            console.log("No transcription received for 1 second. Checking input for submission...");
-            if (inputRef.current.trim() !== "") { // Use the ref here
+            console.log(
+              "No transcription received for 1 second. Checking input for submission..."
+            );
+            if (inputRef.current.trim() !== "") {
               setShouldSubmit(true); // Trigger the useEffect to handle submit
             } else {
               console.log("No valid input to submit.");
@@ -401,8 +389,8 @@ export default function InteractiveAvatar() {
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
                 backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
+                backgroundSize: "cover",
+                backgroundPosition: "center",
               }}
             >
               <Button
