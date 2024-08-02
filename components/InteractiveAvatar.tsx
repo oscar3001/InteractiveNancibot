@@ -111,6 +111,7 @@ export default function InteractiveAvatar() {
   useEffect(() => {
     if (shouldSubmit && input.trim() !== "") {
       console.time("Handle Submit");
+      console.log("Transcripción antes de enviar a OpenAI:", input);
       setIsLoadingChat(true);
       handleSubmit();
       setShouldSubmit(false);
@@ -228,13 +229,13 @@ export default function InteractiveAvatar() {
 
     // Si hay transcripción detectada, enviar mensaje de interrupción predeterminado
     if (transcriptionDetected) {
+      console.log("Transcripción detectada, preparando mensaje de interrupción...");
       const currentTime = Date.now();
-      console.log("Preparando mensaje de interrupción, estado de transcripción:", transcriptionDetected);
       if (currentTime - lastInterruptTime >= 9000) {
         const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
-        console.log("Enviando mensaje de interrupción:", randomInterruptMessage);
         await handleSpeak(randomInterruptMessage);
         setLastInterruptTime(currentTime); // Actualizar el tiempo del último mensaje de interrupción
+        console.log("Mensaje de interrupción enviado:", randomInterruptMessage);
       }
       setTranscriptionDetected(false); // Resetear el indicador
     }
@@ -312,11 +313,11 @@ export default function InteractiveAvatar() {
     // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
-      console.log("Verificando estado del avatar para mensaje repetitivo:", avatarState);
+      console.log("Verificación de mensaje repetido, estado del avatar:", avatarState);
       if (avatarState === "stopped" && shouldRepeat && !interruptInProgress) {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
-        console.log("Enviando mensaje repetitivo:", randomMessage);
         await handleSpeak(randomMessage);
+        console.log("Mensaje repetitivo enviado:", randomMessage);
       }
     }, 6000);
 
@@ -336,7 +337,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true,
-          utterance_end_ms: 1200
+          utterance_end_ms: 1000
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -357,6 +358,7 @@ export default function InteractiveAvatar() {
             const updatedInput = prevInput + "" + newTranscription;
 
             if (updatedInput.trim() !== "") {
+              console.log("Transcripción detectada:", updatedInput);
               setTranscriptionDetected(true); // Indicar que se detectó una transcripción
               setShouldSubmit(false);
             }
