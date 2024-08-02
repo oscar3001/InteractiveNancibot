@@ -45,17 +45,12 @@ const REPEAT_MESSAGES = [
 ];
 
 const INTERRUPT_MESSAGES = [
-  "Cuéntame más",
-  "Lo escucho",
-  "¿algo más?",
-  "¿Ah sí?",
-  "Comprendo",
-  "Prosigue",
-  "cuéntame",
-  "Te Escucho",
-  "entiendo",
-  "perfecto",
-  "oquei",
+  "perdón, querías decir algo más?",
+  "disculpa, queria decir más?",
+  "Disculpa, ¿querías continuar?",
+  "Perdón, ¿algo más?",
+  "Perdón, ¿querías completar tu idea?",
+  "Ops, ¿querías continuar?",
 ];
 
 export default function InteractiveAvatar() {
@@ -195,7 +190,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 8000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -234,8 +229,10 @@ export default function InteractiveAvatar() {
     // Si hay transcripción detectada, enviar mensaje de interrupción predeterminado
     if (transcriptionDetected) {
       const currentTime = Date.now();
-      if (currentTime - lastInterruptTime >= 11000) {
+      console.log("Preparando mensaje de interrupción, estado de transcripción:", transcriptionDetected);
+      if (currentTime - lastInterruptTime >= 9000) {
         const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+        console.log("Enviando mensaje de interrupción:", randomInterruptMessage);
         await handleSpeak(randomInterruptMessage);
         setLastInterruptTime(currentTime); // Actualizar el tiempo del último mensaje de interrupción
       }
@@ -315,14 +312,16 @@ export default function InteractiveAvatar() {
     // Bucle de mensajes repetidos
     const interval = setInterval(async () => {
       const avatarState = localStorage.getItem("avatarState");
-      if (avatarState === "stopped" && shouldRepeat) {
+      console.log("Verificando estado del avatar para mensaje repetitivo:", avatarState);
+      if (avatarState === "stopped" && shouldRepeat && !interruptInProgress) {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
+        console.log("Enviando mensaje repetitivo:", randomMessage);
         await handleSpeak(randomMessage);
       }
-    }, 8000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
-  }, [initialized, data?.sessionId, shouldRepeat]);
+  }, [initialized, data?.sessionId, shouldRepeat, interruptInProgress]);
 
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
