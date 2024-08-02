@@ -27,7 +27,6 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 const REPEAT_MESSAGES = [
   "¿si?",
   "Mhm",
-  "¿Es todo?",
   "¿a?",
   "Mhm",
   "Dime",
@@ -44,7 +43,6 @@ const REPEAT_MESSAGES = [
   "Mhm",
   "¿Qué más?",
   "cuéntame",
-  "Prosigue",
 ];
 
 const INTERRUPT_MESSAGES = [
@@ -201,7 +199,7 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 6000);
+      }, 4000);
     };
 
     console.log("Adding event handlers:", avatar.current);
@@ -329,7 +327,7 @@ export default function InteractiveAvatar() {
         await handleSpeak(randomMessage);
         console.log("Mensaje repetitivo enviado:", randomMessage);
       }
-    }, 6000);
+    }, 4000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat, interruptInProgress]);
