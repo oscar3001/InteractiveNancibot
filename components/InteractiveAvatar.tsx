@@ -26,36 +26,20 @@ const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024
 
 // Lista de mensajes para repetir
 const REPEAT_MESSAGES = [
-  "¿si?",
-  "Mhm",
-  "¿Es todo?",
-  "¿a?",
-  "Te Escucho",
-  "Dime",
-  "¿Ajá?",
-  "bueno",
-  "¿Ah?",
-  "Sigue",
-  "¿Algo más?",
-  "¿Qué más?",
-  "cuéntame",
-  "Estoy atenta",
-  "Prosigue",
+  "Mensaje 1",
+  "Mensaje 2",
+  "Mensaje 3",
+  "Mensaje 4",
+  "Mensaje 5",
 ];
 
 // Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
-  "Cuéntame más",
-  "Lo escucho",
-  "¿algo más?",
-  "¿Ah sí?",
-  "Comprendo",
-  "Prosigue",
-  "cuéntame",
-  "Te Escucho",
-  "entiendo",
-  "perfecto",
-  "oquei",
+  "palabra 1",
+  "palabra 2",
+  "palabra 3",
+  "palabra 4",
+  "palabra 5",
 ];
 
 export default function InteractiveAvatar() {
@@ -202,17 +186,11 @@ export default function InteractiveAvatar() {
       return;
     }
     setInterruptInProgress(true);
-    if (!console.timeStamp) {
-      console.time("Interrupt Avatar");
-    }
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-      if (!console.timeEnd) {
-        console.timeEnd("Interrupt Avatar");
-      }
 
     // Enviar mensaje predeterminado si hay transcripción detectada
     if (transcriptionDetected) {
@@ -303,6 +281,7 @@ export default function InteractiveAvatar() {
           punctuate: true,
           model: "nova-2",
           language: "es",
+          interim_results: true, // Enable interim results
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
