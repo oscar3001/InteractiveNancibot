@@ -20,26 +20,37 @@ import { createClient, LiveTranscriptionEvents } from "@deepgram/sdk";
 import { useEffect, useRef, useState } from "react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4"; // Reemplaza con el ID por defecto
-const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855"; // Reemplaza con el ID por defecto
-const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg"; // Reemplaza con la URL de tu imagen
+const DEFAULT_AVATAR_ID = "e4c17778854d498fbaf942dc6b7079c4";
+const DEFAULT_VOICE_ID = "56dbe24c7bfb4fc0b4939c5663733855";
+const BACKGROUND_IMAGE_URL = "https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg";
 
-// Lista de mensajes para repetir
 const REPEAT_MESSAGES = [
-  "Mensaje 1",
-  "Mensaje 2",
-  "Mensaje 3",
-  "Mensaje 4",
-  "Mensaje 5",
+  "¿si?",
+  "Mhm",
+  "¿Es todo?",
+  "¿a?",
+  "Te Escucho",
+  "ok",
+  "Dime",
+  "¿Ajá?",
+  "bueno",
+  "¿Ah?",
+  "Sigue",
+  "¿Algo más?",
+  "¿Qué más?",
+  "Sigue, sigue",
+  "cuéntame",
+  "Estoy atenta",
+  "Prosigue",
 ];
 
-// Lista de mensajes para interrupción
 const INTERRUPT_MESSAGES = [
-  "palabra 1",
-  "palabra 2",
-  "palabra 3",
-  "palabra 4",
-  "palabra 5",
+  "perdón, querías decir algo más?",
+  "disculpa, queria decir más?",
+  "Disculpa, ¿querías continuar?",
+  "Perdón, ¿algo más?",
+  "Perdón, ¿querías completar tu idea?",
+  "Ops, ¿querías continuar?",
 ];
 
 export default function InteractiveAvatar() {
@@ -60,8 +71,7 @@ export default function InteractiveAvatar() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
-  const interruptButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el botón "Interrumpir Habla"
-  const inputRef = useRef<string>(""); // New ref to store the latest input
+  const interruptButtonRef = useRef<HTMLButtonElement>(null);
   const { input, setInput, handleSubmit } = useChat({
     onFinish: async (message) => {
       console.log("ChatGPT Response:", message);
@@ -74,6 +84,9 @@ export default function InteractiveAvatar() {
       // Prioridad de mensaje de OpenAI - Detener bucle de mensajes
       setShouldRepeat(false);
 
+      if (!console.timeStamp) {
+        console.time("Avatar Speak");
+      }
       await avatar.current
         .speak({
           taskRequest: { text: message.content, sessionId: data?.sessionId },
@@ -81,6 +94,9 @@ export default function InteractiveAvatar() {
         .catch((e) => {
           setDebug(e.message);
         });
+      if (!console.timeEnd) {
+        console.timeEnd("Avatar Speak");
+      }
       setIsLoadingChat(false);
     },
     initialMessages: [
@@ -94,37 +110,44 @@ export default function InteractiveAvatar() {
 
   useEffect(() => {
     if (shouldSubmit && input.trim() !== "") {
-      console.log("Conditions met, submitting...");
+      console.time("Handle Submit");
       setIsLoadingChat(true);
       handleSubmit();
-      setInput(""); // Reset input after submission
-      inputRef.current = ""; // Reset the ref as well
-      setShouldSubmit(false); // Reset the flag
+      setShouldSubmit(false);
+      console.timeEnd("Handle Submit");
     }
-  }, [shouldSubmit, input, handleSubmit, setDebug, setIsLoadingChat]);
+  }, [shouldSubmit, input, handleSubmit]);
 
   async function fetchAccessToken() {
+    console.time("Fetch Access Token");
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
       });
       const token = await response.text();
-      console.log("Access Token:", token); // Log the token to verify
+      console.log("Access Token:", token);
+      console.timeEnd("Fetch Access Token");
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
+      console.timeEnd("Fetch Access Token");
       return "";
     }
   }
 
   async function startSession() {
+    console.log("Starting session...");
     setIsLoadingSession(true);
+    console.time("Update Token");
     await updateToken();
+    console.timeEnd("Update Token");
+
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
       return;
     }
     try {
+      console.time("Create Start Avatar");
       const res = await avatar.current.createStartAvatar(
         {
           newSessionRequest: {
@@ -135,9 +158,10 @@ export default function InteractiveAvatar() {
         },
         setDebug
       );
+      console.timeEnd("Create Start Avatar");
       setData(res);
       setStream(avatar.current.mediaStream);
-      startRecording(); // Iniciar la grabación al iniciar la sesión
+      startRecording();
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
@@ -149,7 +173,7 @@ export default function InteractiveAvatar() {
 
   async function updateToken() {
     const newToken = await fetchAccessToken();
-    console.log("Updating Access Token:", newToken); // Log token for debugging
+    console.log("Updating Access Token:", newToken);
     avatar.current = new StreamingAvatarApi(
       new Configuration({ accessToken: newToken })
     );
@@ -166,14 +190,13 @@ export default function InteractiveAvatar() {
         if (localStorage.getItem("avatarState") === "stopped") {
           setShouldRepeat(true); // Reactivar el bucle después de 4 segundos
         }
-      }, 4000);
+      }, 6000);
     };
 
     console.log("Adding event handlers:", avatar.current);
     avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
     avatar.current.addEventHandler("avatar_stop_talking", stopTalkCallback);
 
-    // Initialize avatar state as stopped by default
     localStorage.setItem("avatarState", "stopped");
 
     setInitialized(true);
@@ -181,16 +204,22 @@ export default function InteractiveAvatar() {
 
   async function handleInterrupt() {
     const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 5000) {
+    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 9000) {
       setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
       return;
     }
     setInterruptInProgress(true);
+    if (!console.timeStamp) {
+      console.time("Interrupt Avatar");
+    }
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
+    if (!console.timeEnd) {
+      console.timeEnd("Interrupt Avatar");
+    }
 
     // Enviar mensaje predeterminado si hay transcripción detectada
     if (transcriptionDetected) {
@@ -208,10 +237,16 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    if (!console.timeStamp) {
+      console.time("Stop Avatar");
+    }
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: data?.sessionId } },
       setDebug
     );
+    if (!console.timeEnd) {
+      console.timeEnd("Stop Avatar");
+    }
     setStream(undefined);
   }
 
@@ -221,22 +256,30 @@ export default function InteractiveAvatar() {
       setDebug("Avatar API not initialized");
       return;
     }
+    if (!console.timeStamp) {
+      console.time("Avatar Speak Repeat");
+    }
     await avatar.current
       .speak({ taskRequest: { text: text, sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
+    if (!console.timeEnd) {
+      console.timeEnd("Avatar Speak Repeat");
+    }
     setIsLoadingRepeat(false);
   }
 
   useEffect(() => {
     async function init() {
+      console.time("Init Fetch Access Token");
       const newToken = await fetchAccessToken();
-      console.log("Initializing with Access Token:", newToken); // Log token for debugging
+      console.log("Initializing with Access Token:", newToken);
       avatar.current = new StreamingAvatarApi(
-        new Configuration({ accessToken: newToken, jitterBuffer: 80 })
+        new Configuration({ accessToken: newToken, jitterBuffer: 60 })
       );
-      setInitialized(true); // Set initialized to true
+      setInitialized(true);
+      console.timeEnd("Init Fetch Access Token");
     }
     init();
 
@@ -263,7 +306,7 @@ export default function InteractiveAvatar() {
         const randomMessage = REPEAT_MESSAGES[Math.floor(Math.random() * REPEAT_MESSAGES.length)];
         await handleSpeak(randomMessage);
       }
-    }, 4000);
+    }, 6000);
 
     return () => clearInterval(interval); // Limpieza al desmontar el componente
   }, [initialized, data?.sessionId, shouldRepeat]);
@@ -271,7 +314,6 @@ export default function InteractiveAvatar() {
   function startRecording() {
     const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
     const deepgram = createClient(deepgramApiKey);
-    let timeoutId: NodeJS.Timeout;
 
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -279,52 +321,48 @@ export default function InteractiveAvatar() {
         mediaRecorder.current = new MediaRecorder(stream);
         const connection = deepgram.listen.live({
           punctuate: true,
-          model: "nova-2",
-          language: "es",
-          interim_results: true, // Enable interim results
+          model: 'nova-2',
+          language: 'es',
+          interim_results: true,
+          utterance_end_ms: 1000
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
-          console.log("Deepgram connection opened.");
           mediaRecorder.current!.ondataavailable = (event) => {
             connection.send(event.data);
           };
           mediaRecorder.current!.onstop = () => {
             connection.finish();
-            console.log("Deepgram connection closed.");
             setRecording(false);
           };
-          mediaRecorder.current!.start(50);
+          mediaRecorder.current!.start(40);
           setRecording(true);
         });
 
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
-          console.log("Received transcription: ", newTranscription);
-
-          // Reset timer on new transcription
-          clearTimeout(timeoutId);
-
-          // Concatenate transcription
           setInput((prevInput) => {
-            const updatedInput = prevInput + "" + newTranscription;
-            console.log("Updated input: ", updatedInput);
-            inputRef.current = updatedInput; // Update the ref with the latest input
+            const updatedInput = prevInput + " " + newTranscription;
 
+            if (updatedInput.trim() !== "") {
+              setTranscriptionDetected(true); // Indicar que se detectó una transcripción
+              setShouldSubmit(false);
+            }
+
+            const avatarState = localStorage.getItem("avatarState");
+            if (updatedInput.trim() !== "" && avatarState === "started") {
+              if (interruptButtonRef.current) {
+                setTimeout(() => {
+                  interruptButtonRef.current?.click();
+                }, 0);
+              }
+            }
             return updatedInput;
           });
+        });
 
-          // Start timer to check for no transcription
-          timeoutId = setTimeout(() => {
-            console.log(
-              "No transcription received for 1 second. Checking input for submission..."
-            );
-            if (inputRef.current.trim() !== "") {
-              setShouldSubmit(true); // Trigger the useEffect to handle submit
-            } else {
-              console.log("No valid input to submit.");
-            }
-          }, 1000);
+        connection.on('UtteranceEnd', (data) => {
+          setShouldSubmit(true);
         });
 
         connection.on(LiveTranscriptionEvents.Error, (error) => {
@@ -343,14 +381,6 @@ export default function InteractiveAvatar() {
     }
   }
 
-  // Function to check if input contains any text or numbers
-  function checkForText(input) {
-    const regex = /\S/;
-    const result = regex.test(input);
-    console.log("Checking for text in input: ", input, " Result: ", result);
-    return result;
-  }
-
   return (
     <div className="w-full h-screen flex flex-col gap-4">
       <Card className="w-full h-full">
@@ -367,7 +397,7 @@ export default function InteractiveAvatar() {
               </video>
               <div className="flex flex-col gap-2 absolute bottom-3 right-3">
                 <Button
-                  ref={interruptButtonRef} // Añadir referencia aquí
+                  ref={interruptButtonRef}
                   size="md"
                   onClick={handleInterrupt}
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
@@ -390,8 +420,8 @@ export default function InteractiveAvatar() {
               className="w-full h-full flex justify-center items-center flex-col gap-8"
               style={{
                 backgroundImage: `url(${BACKGROUND_IMAGE_URL})`,
-                backgroundSize: "cover",
-                backgroundPosition: "center",
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
               }}
             >
               <Button
@@ -400,7 +430,7 @@ export default function InteractiveAvatar() {
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-1/2 text-white"
                 variant="shadow"
               >
-                Llamar a Nancy Bot
+                Llamar a Nanci Bot
               </Button>
             </div>
           ) : (
@@ -412,9 +442,9 @@ export default function InteractiveAvatar() {
           <div className="hidden">
             <InteractiveAvatarTextInput
               label="Repeat"
-              placeholder="Inggrese mensaje que se va a repetir"
+              placeholder="Ingrese mensaje que se va a repetir"
               input={text}
-              onSubmit={handleSpeak}
+              onSubmit={() => handleSpeak(text)}
               setInput={setText}
               disabled={!stream}
               loading={isLoadingRepeat}
