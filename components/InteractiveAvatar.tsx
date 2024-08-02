@@ -203,30 +203,38 @@ export default function InteractiveAvatar() {
   }
 
   async function handleInterrupt() {
-    const currentTime = Date.now();
-    if (!initialized || !avatar.current || interruptInProgress || currentTime - lastInterruptTime < 9000) {
-      setDebug("Avatar API not initialized, interrupt in progress, or cooldown active");
+    if (!initialized || !avatar.current || interruptInProgress) {
+      setDebug("Avatar API not initialized or interrupt in progress");
       return;
     }
-    setInterruptInProgress(true);
-    if (!console.timeStamp) {
-      console.time("Interrupt Avatar");
+
+    const avatarState = localStorage.getItem("avatarState");
+    if (avatarState !== "started") {
+      setDebug("Avatar is not talking");
+      return;
     }
+
+    setInterruptInProgress(true);
+    console.time("Interrupt Avatar");
+
+    // Interrumpir el avatar
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: data?.sessionId } })
       .catch((e) => {
         setDebug(e.message);
       });
-    if (!console.timeEnd) {
-      console.timeEnd("Interrupt Avatar");
-    }
 
-    // Enviar mensaje predeterminado si hay transcripción detectada
+    console.timeEnd("Interrupt Avatar");
+
+    // Si hay transcripción detectada, enviar mensaje de interrupción predeterminado
     if (transcriptionDetected) {
-      const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
-      await handleSpeak(randomInterruptMessage);
+      const currentTime = Date.now();
+      if (currentTime - lastInterruptTime >= 9000) {
+        const randomInterruptMessage = INTERRUPT_MESSAGES[Math.floor(Math.random() * INTERRUPT_MESSAGES.length)];
+        await handleSpeak(randomInterruptMessage);
+        setLastInterruptTime(currentTime); // Actualizar el tiempo del último mensaje de interrupción
+      }
       setTranscriptionDetected(false); // Resetear el indicador
-      setLastInterruptTime(currentTime); // Actualizar el tiempo del último interrupt
     }
 
     setInterruptInProgress(false);
@@ -324,7 +332,7 @@ export default function InteractiveAvatar() {
           model: 'nova-2',
           language: 'es',
           interim_results: true,
-          utterance_end_ms: 1000
+          utterance_end_ms: 1300
         });
 
         connection.on(LiveTranscriptionEvents.Open, () => {
@@ -342,7 +350,7 @@ export default function InteractiveAvatar() {
         connection.on(LiveTranscriptionEvents.Transcript, (data) => {
           const newTranscription = data.channel.alternatives[0].transcript;
           setInput((prevInput) => {
-            const updatedInput = prevInput + " " + newTranscription;
+            const updatedInput = prevInput + "" + newTranscription;
 
             if (updatedInput.trim() !== "") {
               setTranscriptionDetected(true); // Indicar que se detectó una transcripción
