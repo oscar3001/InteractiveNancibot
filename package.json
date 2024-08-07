@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.34",
-    "@heygen/streaming-avatar": "^1.0.15",
+    "@heygen/streaming-avatar": "^1.0.16",
     "@nextui-org/button": "2.0.34",
     "@nextui-org/code": "2.0.29",
     "@nextui-org/input": "2.2.2",
@@ -28,15 +28,17 @@
     "@react-aria/visually-hidden": "3.8.12",
     "@uiw/codemirror-extensions-langs": "^4.22.1",
     "@uiw/react-codemirror": "^4.22.1",
+    "@vapi-ai/web": "^2.1.0",
     "ai": "^3.2.15",
     "clsx": "2.1.1",
     "framer-motion": "~11.1.1",
     "intl-messageformat": "^10.5.0",
-    "next": "14.2.4",
+    "next": "^14.2.5",
     "next-themes": "^0.2.1",
     "openai": "^4.52.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
+    "react-icons": "^5.2.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
