@@ -146,8 +146,8 @@ export default function App() {
       const res = await avatar.current!.createStartAvatar({
         newSessionRequest: {
           quality: "low",
-          avatarName: "Eric_public_pro2_20230608",
-          voice: { voiceId: "077ab11b14f04ce0b49b5f6e5cc20979" },
+          avatarName: "e4c17778854d498fbaf942dc6b7079c4",
+          voice: { voiceId: "2d18aa7c2ca04548adac93904354322f" },
         },
       });
       setSessionData(res);
