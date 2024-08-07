@@ -355,7 +355,7 @@ export default function App() {
               }
               modelOutput.current = ""; // Limpiar la variable local después de imprimir
             }
-          }, 200);
+          }, 350);
         }
       }
       // Manejo del evento "user-interrupted"
