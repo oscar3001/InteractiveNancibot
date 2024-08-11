@@ -25,7 +25,6 @@ export default function InteractiveAvatar() {
   const voiceId = "5a9c9650cfca44ca98d6b2297c7fb5e2";
   const socket = useRef<WebSocket | null>(null);
   const captions = useRef<HTMLDivElement>(null);
-  const debugRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Usar useRef para almacenar el estado del avatar y evitar problemas de actualización
   const avatarState = useRef<string>("avatar_stop_talking");
@@ -42,22 +41,18 @@ export default function InteractiveAvatar() {
   // Función para manejar la interrupción
   const handleInterrupt = useCallback(async () => {
     if (!initialized || !avatar.current) {
-      appendDebug("Avatar API not initialized");
+      setDebug("Avatar API not initialized");
       return;
     }
     console.log("Interrupting avatar");
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: sessionId } })
       .catch((e) => {
-        appendDebug(e.message);
+        setDebug(e.message);
       });
     // Marcar como interrumpido
     hasInterrupted.current = true;
   }, [initialized, avatar.current, sessionId]);
-
-  const appendDebug = (message: string) => {
-    setDebug((prev) => prev + "\n" + message);
-  };
 
   async function fetchAccessToken() {
     try {
@@ -66,11 +61,9 @@ export default function InteractiveAvatar() {
       });
       const token = await response.text();
       console.log("Access Token:", token);
-      appendDebug("Access Token: " + token);
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
-      appendDebug("Error fetching access token: " + error.message);
       return "";
     }
   }
@@ -79,7 +72,7 @@ export default function InteractiveAvatar() {
     setIsLoadingSession(true);
     await updateToken();
     if (!avatar.current) {
-      appendDebug("Avatar API is not initialized");
+      setDebug("Avatar API is not initialized");
       return;
     }
     try {
@@ -91,7 +84,7 @@ export default function InteractiveAvatar() {
             voice: { voiceId: voiceId },
           },
         },
-        appendDebug
+        setDebug
       );
       setVideoStream(avatar.current.mediaStream);
       setSessionId(res.sessionId);
@@ -102,7 +95,11 @@ export default function InteractiveAvatar() {
       startTranscription();
     } catch (error) {
       console.error("Error starting avatar session:", error);
-      appendDebug(`Error starting session: ${error.message}`);
+      setDebug(
+        `There was an error starting the session. ${
+          voiceId ? "This custom voice ID may not be supported." : ""
+        }`
+      );
     }
     setIsLoadingSession(false);
   }
@@ -110,7 +107,7 @@ export default function InteractiveAvatar() {
   async function updateToken() {
     const newToken = await fetchAccessToken();
     if (!newToken) {
-      appendDebug("Failed to fetch access token");
+      setDebug("Failed to fetch access token");
       return;
     }
     avatar.current = new StreamingAvatarApi(
@@ -122,7 +119,6 @@ export default function InteractiveAvatar() {
       avatarState.current = "avatar_start_talking"; // Usar avatarState.current
       hasInterrupted.current = false; // Resetear la bandera al iniciar a hablar
       console.log("Avatar state updated to:", "avatar_start_talking");
-      appendDebug("Avatar started talking");
     };
 
     const stopTalkCallback = (e: any) => {
@@ -130,7 +126,6 @@ export default function InteractiveAvatar() {
       avatarState.current = "avatar_stop_talking"; // Usar avatarState.current
       hasInterrupted.current = false; // Resetear la bandera al detenerse
       console.log("Avatar state updated to:", "avatar_stop_talking");
-      appendDebug("Avatar stopped talking");
     };
 
     avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
@@ -141,12 +136,12 @@ export default function InteractiveAvatar() {
 
   async function endSession() {
     if (!initialized || !avatar.current) {
-      appendDebug("Avatar API not initialized");
+      setDebug("Avatar API not initialized");
       return;
     }
     await avatar.current.stopAvatar(
       { stopSessionRequest: { sessionId: sessionId } },
-      appendDebug
+      setDebug
     );
     setVideoStream(null);
     setAudioStream(null);
@@ -156,30 +151,26 @@ export default function InteractiveAvatar() {
   async function handleSpeak() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
-      appendDebug("Avatar API not initialized");
+      setDebug("Avatar API not initialized");
       return;
     }
     if (!sessionId) {
-      appendDebug("Session ID not set");
+      setDebug("Session ID not set");
       return;
     }
     await avatar.current
       .speak({ taskRequest: { text: dynamicText, sessionId: sessionId } })
       .catch((e) => {
-        appendDebug(e.message);
+        setDebug(e.message);
       });
     setIsLoadingRepeat(false);
   }
 
   async function openMicrophone() {
     try {
-      console.log("Requesting microphone access...");
-      appendDebug("Requesting microphone access...");
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
-      console.log("Microphone access granted");
-      appendDebug("Microphone access granted");
       setAudioStream(audioStream);
 
       const mediaRecorder = new MediaRecorder(audioStream, {
@@ -188,24 +179,22 @@ export default function InteractiveAvatar() {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0 && socket.current?.readyState === WebSocket.OPEN) {
-          console.log("Sending audio data...");
           socket.current.send(event.data);
         }
       };
 
       mediaRecorder.start(500);
     } catch (error) {
-      console.error("Microphone access denied or error:", error);
-      appendDebug("Error accessing microphone: " + error.message);
+      console.error("Error accessing microphone:", error);
+      setDebug("Error accessing microphone");
     }
   }
 
   async function startTranscription() {
-    socket.current = new WebSocket("wss://localhost:3001");
+    socket.current = new WebSocket("ws://localhost:3001");
 
     socket.current.addEventListener("open", () => {
       console.log("WebSocket: connected");
-      appendDebug("WebSocket: connected");
     });
 
     let user_dice = "";
@@ -218,7 +207,6 @@ export default function InteractiveAvatar() {
         const speechFinal = data.speech_final;
 
         console.log("Transcript received:", transcript);
-        appendDebug(`Transcript received: ${transcript}`);
         console.log("is_final:", isFinal, "speech_final:", speechFinal);
 
         // Revisar si el avatar está hablando y el botón no ha sido presionado
@@ -226,7 +214,6 @@ export default function InteractiveAvatar() {
           console.log(
             "Avatar is talking and partial transcript received. Interrupting..."
           );
-          appendDebug("Avatar is talking and partial transcript received. Interrupting...");
 
           // Simular un clic en el botón de interrumpir
           if (interruptButtonRef.current) {
@@ -237,7 +224,6 @@ export default function InteractiveAvatar() {
         if (isFinal) {
           user_dice += transcript + " ";
           console.log("Current user_dice:", user_dice);
-          appendDebug("Current user_dice: " + user_dice);
 
           // Iniciar temporizador de 2 segundos si is_final es True y speech_final es False
           if (!speechFinal) {
@@ -245,7 +231,6 @@ export default function InteractiveAvatar() {
               // Forzar el envío de user_dice como Final User Transcript si no se cancela
               if (isFinal && !speechFinal) {
                 console.log("Forced Final User Transcript:", user_dice);
-                appendDebug("Forced Final User Transcript: " + user_dice);
                 processFinalUserTranscript(user_dice); // Usar el flujo natural
                 user_dice = ""; // Limpiar user_dice después de procesar
               }
@@ -271,14 +256,12 @@ export default function InteractiveAvatar() {
 
     socket.current.addEventListener("close", () => {
       console.log("WebSocket: disconnected");
-      appendDebug("WebSocket: disconnected");
     });
   }
 
   // Unificar el flujo de procesamiento para Final User Transcript
   const processFinalUserTranscript = async (transcript: string) => {
     console.log("Processing transcript:", transcript);
-    appendDebug("Processing transcript: " + transcript);
     const startTime = performance.now(); // Start timer
 
     // Verificar usando avatarState.current
@@ -286,7 +269,6 @@ export default function InteractiveAvatar() {
       console.log(
         "Avatar is talking and final user transcript received. Interrupting..."
       );
-      appendDebug("Avatar is talking and final user transcript received. Interrupting...");
 
       // Simular un clic en el botón de interrumpir
       if (interruptButtonRef.current) {
@@ -294,7 +276,6 @@ export default function InteractiveAvatar() {
       }
     } else {
       console.log("Avatar is not talking. No action taken.");
-      appendDebug("Avatar is not talking. No action taken.");
     }
 
     try {
@@ -313,14 +294,11 @@ export default function InteractiveAvatar() {
 
       console.log("OpenAI response:", responseText);
       console.log(`Request duration: ${duration.toFixed(2)} ms`);
-      appendDebug(`OpenAI response: ${responseText}`);
-      appendDebug(`Request duration: ${duration.toFixed(2)} ms`);
 
       // Actualizar el texto dinámico con el valor recibido de OpenAI
       setDynamicText(responseText);
     } catch (error) {
       console.error("Error calling OpenAI API:", error);
-      appendDebug("Error calling OpenAI API: " + error.message);
     }
   };
 
@@ -356,11 +334,10 @@ export default function InteractiveAvatar() {
       mediaStream.current.srcObject = videoStream;
       mediaStream.current.onloadedmetadata = () => {
         mediaStream.current!.play();
-        appendDebug("Playing");
+        setDebug("Playing");
       };
     } else {
       console.warn("Stream or mediaStream not set");
-      appendDebug("Stream or mediaStream not set");
     }
   }, [mediaStream, videoStream]);
 
@@ -370,13 +347,6 @@ export default function InteractiveAvatar() {
       handleSpeak();
     }
   }, [dynamicText]);
-
-  // Hacer scroll automático al final del área de texto de depuración
-  useEffect(() => {
-    if (debugRef.current) {
-      debugRef.current.scrollTop = debugRef.current.scrollHeight;
-    }
-  }, [debug]);
 
   return (
     <div
@@ -434,24 +404,6 @@ export default function InteractiveAvatar() {
           ) : (
             <Spinner size="lg" color="default" />
           )}
-          {/* Cuadro de texto para mostrar mensajes de depuración */}
-          <textarea
-            ref={debugRef}
-            readOnly
-            value={debug}
-            style={{
-              width: "100%",
-              height: "200px",
-              marginTop: "20px",
-              padding: "10px",
-              backgroundColor: "#f0f0f0",
-              color: "#333",
-              border: "1px solid #ccc",
-              borderRadius: "8px",
-              resize: "none",
-              overflowY: "scroll", // Habilitar scroll vertical
-            }}
-          />
         </CardBody>
         {/* Posicionar los botones de manera absoluta sobre el video */}
         <div
