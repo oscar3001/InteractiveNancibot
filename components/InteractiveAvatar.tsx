@@ -199,6 +199,15 @@ export default function InteractiveAvatar() {
       console.log("WebSocket: connected");
       setDebug((prev) => prev + "\nWebSocket: connected");
     });
+      socket.current.addEventListener("close", (event) => {
+    console.log("WebSocket: disconnected", event.code, event.reason);
+    setDebug(`WebSocket disconnected: ${event.reason}`);
+  });
+
+  socket.current.addEventListener("error", (error) => {
+    console.error("WebSocket error:", error);
+    setDebug("WebSocket error");
+  });
 
     let user_dice = "";
 
