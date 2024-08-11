@@ -41,14 +41,14 @@ export default function InteractiveAvatar() {
   // Función para manejar la interrupción
   const handleInterrupt = useCallback(async () => {
     if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+      setDebug((prev) => prev + "\nAvatar API not initialized");
       return;
     }
     console.log("Interrupting avatar");
     await avatar.current
       .interrupt({ interruptRequest: { sessionId: sessionId } })
       .catch((e) => {
-        setDebug(e.message);
+        setDebug((prev) => prev + `\n${e.message}`);
       });
     // Marcar como interrumpido
     hasInterrupted.current = true;
@@ -64,6 +64,7 @@ export default function InteractiveAvatar() {
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
+      setDebug((prev) => prev + `\nError fetching access token: ${error}`);
       return "";
     }
   }
@@ -72,7 +73,7 @@ export default function InteractiveAvatar() {
     setIsLoadingSession(true);
     await updateToken();
     if (!avatar.current) {
-      setDebug("Avatar API is not initialized");
+      setDebug((prev) => prev + "\nAvatar API is not initialized");
       return;
     }
     try {
@@ -95,11 +96,7 @@ export default function InteractiveAvatar() {
       startTranscription();
     } catch (error) {
       console.error("Error starting avatar session:", error);
-      setDebug(
-        `There was an error starting the session. ${
-          voiceId ? "This custom voice ID may not be supported." : ""
-        }`
-      );
+      setDebug((prev) => prev + `\nError starting session: ${error}`);
     }
     setIsLoadingSession(false);
   }
@@ -107,7 +104,7 @@ export default function InteractiveAvatar() {
   async function updateToken() {
     const newToken = await fetchAccessToken();
     if (!newToken) {
-      setDebug("Failed to fetch access token");
+      setDebug((prev) => prev + "\nFailed to fetch access token");
       return;
     }
     avatar.current = new StreamingAvatarApi(
@@ -136,7 +133,7 @@ export default function InteractiveAvatar() {
 
   async function endSession() {
     if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+      setDebug((prev) => prev + "\nAvatar API not initialized");
       return;
     }
     await avatar.current.stopAvatar(
@@ -151,26 +148,30 @@ export default function InteractiveAvatar() {
   async function handleSpeak() {
     setIsLoadingRepeat(true);
     if (!initialized || !avatar.current) {
-      setDebug("Avatar API not initialized");
+      setDebug((prev) => prev + "\nAvatar API not initialized");
       return;
     }
     if (!sessionId) {
-      setDebug("Session ID not set");
+      setDebug((prev) => prev + "\nSession ID not set");
       return;
     }
     await avatar.current
       .speak({ taskRequest: { text: dynamicText, sessionId: sessionId } })
       .catch((e) => {
-        setDebug(e.message);
+        setDebug((prev) => prev + `\n${e.message}`);
       });
     setIsLoadingRepeat(false);
   }
 
   async function openMicrophone() {
     try {
+      console.log("Requesting microphone access...");
+      setDebug((prev) => prev + "\nRequesting microphone access...");
       const audioStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
+      console.log("Microphone access granted");
+      setDebug((prev) => prev + "\nMicrophone access granted");
       setAudioStream(audioStream);
 
       const mediaRecorder = new MediaRecorder(audioStream, {
@@ -179,14 +180,15 @@ export default function InteractiveAvatar() {
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0 && socket.current?.readyState === WebSocket.OPEN) {
+          console.log("Sending audio data...");
           socket.current.send(event.data);
         }
       };
 
       mediaRecorder.start(500);
     } catch (error) {
-      console.error("Error accessing microphone:", error);
-      setDebug("Error accessing microphone");
+      console.error("Microphone access denied or error:", error);
+      setDebug((prev) => prev + "\nError accessing microphone");
     }
   }
 
@@ -195,6 +197,7 @@ export default function InteractiveAvatar() {
 
     socket.current.addEventListener("open", () => {
       console.log("WebSocket: connected");
+      setDebug((prev) => prev + "\nWebSocket: connected");
     });
 
     let user_dice = "";
@@ -256,12 +259,14 @@ export default function InteractiveAvatar() {
 
     socket.current.addEventListener("close", () => {
       console.log("WebSocket: disconnected");
+      setDebug((prev) => prev + "\nWebSocket: disconnected");
     });
   }
 
   // Unificar el flujo de procesamiento para Final User Transcript
   const processFinalUserTranscript = async (transcript: string) => {
     console.log("Processing transcript:", transcript);
+    setDebug((prev) => prev + `\nProcessing transcript: ${transcript}`);
     const startTime = performance.now(); // Start timer
 
     // Verificar usando avatarState.current
@@ -299,6 +304,7 @@ export default function InteractiveAvatar() {
       setDynamicText(responseText);
     } catch (error) {
       console.error("Error calling OpenAI API:", error);
+      setDebug((prev) => prev + `\nError calling OpenAI API: ${error}`);
     }
   };
 
@@ -334,10 +340,11 @@ export default function InteractiveAvatar() {
       mediaStream.current.srcObject = videoStream;
       mediaStream.current.onloadedmetadata = () => {
         mediaStream.current!.play();
-        setDebug("Playing");
+        setDebug((prev) => prev + "\nPlaying");
       };
     } else {
       console.warn("Stream or mediaStream not set");
+      setDebug((prev) => prev + "\nStream or mediaStream not set");
     }
   }, [mediaStream, videoStream]);
 
@@ -404,6 +411,22 @@ export default function InteractiveAvatar() {
           ) : (
             <Spinner size="lg" color="default" />
           )}
+          {/* Cuadro de texto para mostrar mensajes de depuración */}
+          <textarea
+            readOnly
+            value={debug}
+            style={{
+              width: "100%",
+              height: "200px",
+              marginTop: "20px",
+              padding: "10px",
+              backgroundColor: "#f0f0f0",
+              color: "#333",
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              resize: "none",
+            }}
+          />
         </CardBody>
         {/* Posicionar los botones de manera absoluta sobre el video */}
         <div
