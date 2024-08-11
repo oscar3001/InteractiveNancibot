@@ -79,7 +79,7 @@ export default function InteractiveAvatar() {
       const res = await avatar.current.createStartAvatar(
         {
           newSessionRequest: {
-            quality: "low",
+            quality: "medium",
             avatarName: avatarId,
             voice: { voiceId: voiceId },
           },
