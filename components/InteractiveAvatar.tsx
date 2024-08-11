@@ -73,6 +73,7 @@ export default function InteractiveAvatar() {
     await updateToken();
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
+      setIsLoadingSession(false);
       return;
     }
     try {
@@ -88,6 +89,10 @@ export default function InteractiveAvatar() {
       );
       setVideoStream(avatar.current.mediaStream);
       setSessionId(res.sessionId);
+
+      // Solicitar permiso del micrófono aquí
+      await openMicrophone();
+
       startTranscription();
     } catch (error) {
       console.error("Error starting avatar session:", error);
@@ -179,7 +184,7 @@ export default function InteractiveAvatar() {
         }
       };
 
-      mediaRecorder.start(1000);
+      mediaRecorder.start(500);
     } catch (error) {
       console.error("Error accessing microphone:", error);
       setDebug("Error accessing microphone");
@@ -191,7 +196,6 @@ export default function InteractiveAvatar() {
 
     socket.current.addEventListener("open", () => {
       console.log("WebSocket: connected");
-      openMicrophone();
     });
 
     let user_dice = "";
@@ -280,7 +284,7 @@ export default function InteractiveAvatar() {
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini-2024-07-18",
         messages: [
-          { role: "system", content: "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, as preguntas al usuario para conocer que le gusta mas" },
+          { role: "system", content: "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, haz preguntas al usuario para conocer qué le gusta más" },
           { role: "user", content: transcript },
         ],
       });
