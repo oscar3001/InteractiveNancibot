@@ -73,7 +73,6 @@ export default function InteractiveAvatar() {
     await updateToken();
     if (!avatar.current) {
       setDebug("Avatar API is not initialized");
-      setIsLoadingSession(false);
       return;
     }
     try {
@@ -90,8 +89,8 @@ export default function InteractiveAvatar() {
       setVideoStream(avatar.current.mediaStream);
       setSessionId(res.sessionId);
 
-      // Solicitar permiso del micrófono aquí
-      await openMicrophone();
+      // Llama a openMicrophone aquí, en respuesta a una acción del usuario
+      await openMicrophone(); // Espera a que el usuario conceda el permiso
 
       startTranscription();
     } catch (error) {
@@ -284,7 +283,7 @@ export default function InteractiveAvatar() {
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini-2024-07-18",
         messages: [
-          { role: "system", content: "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, haz preguntas al usuario para conocer qué le gusta más" },
+          { role: "system", content: "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, as preguntas al usuario para conocer que le gusta mas" },
           { role: "user", content: transcript },
         ],
       });
