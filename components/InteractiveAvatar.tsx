@@ -280,7 +280,7 @@ export default function InteractiveAvatar() {
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini-2024-07-18",
         messages: [
-          { role: "system", content: "Eres un asistente experto en vinos, responde de manera muy breve ya que estas en una videollamada." },
+          { role: "system", content: "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, as preguntas al usuario para conocer que le gusta mas" },
           { role: "user", content: transcript },
         ],
       });
