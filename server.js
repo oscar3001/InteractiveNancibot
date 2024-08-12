@@ -116,7 +116,7 @@ wss.on("connection", (ws) => {
 
 app.use(express.static("public/"));
 app.get("/", (req, res) => {
-  res.sendFile(__dirname + "/public/index.html");
+  res.sendFile(__dirname + "/components/InteractiveAvatar.tsx");
 });
 
 const PORT = process.env.PORT || 4000; // Usa el puerto asignado por Render o un puerto por defecto para desarrollo local
