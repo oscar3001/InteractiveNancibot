@@ -1,4 +1,5 @@
 const express = require("express");
+const helmet = require("helmet");
 const http = require("http");
 const WebSocket = require("ws");
 const { createClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
@@ -6,6 +7,23 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
+
+// Configurar Helmet para gestionar CSP y otras cabeceras de seguridad
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "default-src": ["'self'"],
+        "font-src": ["'self'", "data:"], // Permitir fuentes desde data: URIs
+        "img-src": ["'self'", "data:", "https:"], // Permitir imágenes desde data: URIs y fuentes seguras
+        "script-src": ["'self'", "'unsafe-inline'", "https:"], // Permitir scripts inline si es necesario
+        "connect-src": ["'self'", "wss:"], // Permitir conexiones WebSocket
+      },
+    },
+  })
+);
+
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
@@ -101,9 +119,7 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
-const PORT = process.env.PORT || 3001; // Usa el puerto asignado por Render o un puerto por defecto para desarrollo local
+const PORT = process.env.PORT || 4000; // Usa el puerto asignado por Render o un puerto por defecto para desarrollo local
 server.listen(PORT, () => {
-  console.log(`Server is listening on port ${PORT}`);
+  console.log(`HTTP and WebSocket server is listening on port ${PORT}`);
 });
-
-
