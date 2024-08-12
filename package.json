@@ -7,7 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx -c .eslintrc.json --fix"
-    "dev:server": "next dev --turbo & node server.js"
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.34",
