@@ -1,3 +1,4 @@
+// interactiveavatar.jsx
 import { Configuration, StreamingAvatarApi } from "@heygen/streaming-avatar";
 import { Button, Card, CardBody, Spinner } from "@nextui-org/react";
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -7,6 +8,9 @@ const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
+
+// Configuración de la API de Deepgram
+const deepgramApiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -23,7 +27,6 @@ export default function InteractiveAvatar() {
   const [sessionId, setSessionId] = useState<string>("");
   const avatarId = "676a3ab0273440418ceb007502ab372c";
   const voiceId = "5a9c9650cfca44ca98d6b2297c7fb5e2";
-  const socket = useRef<WebSocket | null>(null);
   const captions = useRef<HTMLDivElement>(null);
 
   // Usar useRef para almacenar el estado del avatar y evitar problemas de actualización
@@ -37,6 +40,9 @@ export default function InteractiveAvatar() {
 
   // Nueva variable de estado para controlar la interrupción
   const hasInterrupted = useRef<boolean>(false);
+
+  // Usar useRef para almacenar user_dice y persistir su estado
+  const userDiceRef = useRef<string>("");
 
   // Función para manejar la interrupción
   const handleInterrupt = useCallback(async () => {
@@ -91,8 +97,6 @@ export default function InteractiveAvatar() {
 
       // Llama a openMicrophone aquí, en respuesta a una acción del usuario
       await openMicrophone(); // Espera a que el usuario conceda el permiso
-
-      startTranscription();
     } catch (error) {
       console.error("Error starting avatar session:", error);
       setDebug(
@@ -166,6 +170,16 @@ export default function InteractiveAvatar() {
     setIsLoadingRepeat(false);
   }
 
+  // Deepgram options to be editable
+  const deepgramOptions = {
+    vad_events: true,
+    interim_results: true,
+    endpointing: 300,
+    utterance_end_ms: "1000",
+    language: "multi",
+    model: "nova-2",
+  };
+
   async function openMicrophone() {
     try {
       const audioStream = await navigator.mediaDevices.getUserMedia({
@@ -174,89 +188,123 @@ export default function InteractiveAvatar() {
       setAudioStream(audioStream);
 
       const mediaRecorder = new MediaRecorder(audioStream, {
-        mimeType: "audio/webm",
+        mimeType: "audio/webm;codecs=opus", // Asegúrate de que el códec es compatible
       });
 
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && socket.current?.readyState === WebSocket.OPEN) {
-          socket.current.send(event.data);
+      const deepgramSocket = new WebSocket(
+        `wss://api.deepgram.com/v1/listen?vad_events=${deepgramOptions.vad_events}&interim_results=${deepgramOptions.interim_results}&endpointing=${deepgramOptions.endpointing}&utterance_end_ms=${deepgramOptions.utterance_end_ms}&language=${deepgramOptions.language}&model=${deepgramOptions.model}`,
+        ["token", deepgramApiKey]
+      );
+
+      deepgramSocket.onopen = () => {
+        console.log("WebSocket connection opened to Deepgram");
+        mediaRecorder.start(250); // Start recording with 250ms buffer size
+      };
+
+      deepgramSocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("Deepgram response:", data);
+
+          // Handle SpeechStarted event
+          if (data.type === "SpeechStarted") {
+            console.log("Speech started at timestamp:", data.timestamp);
+            return; // Skip further processing for SpeechStarted
+          }
+
+          // Handle transcription results
+          if (data.type === "Results") {
+            const { alternatives } = data.channel;
+            if (!alternatives || alternatives.length === 0) {
+              console.log("No alternatives available in the result.");
+              return;
+            }
+
+            const transcript = alternatives[0].transcript;
+            const isFinal = data.is_final;
+            const speechFinal = data.speech_final;
+
+            console.log("Transcript received:", transcript);
+            console.log("is_final:", isFinal, "speech_final:", speechFinal);
+
+            if (
+              transcript.trim() !== "" && // Verificar que el transcripto no esté vacío
+              avatarState.current === "avatar_start_talking" &&
+              !hasInterrupted.current
+            ) {
+              console.log(
+                "Avatar is talking and partial transcript received. Interrupting..."
+              );
+              if (interruptButtonRef.current) {
+                interruptButtonRef.current.click();
+              }
+            }
+
+            if (isFinal) {
+              if (transcript.trim() !== "") {
+                userDiceRef.current += transcript + " ";
+                console.log("Current user_dice:", userDiceRef.current);
+              }
+
+              if (!speechFinal) {
+                timerRef.current = setTimeout(() => {
+                  if (isFinal && !speechFinal && userDiceRef.current.trim() !== "") {
+                    console.log(
+                      "Forced Final User Transcript:",
+                      userDiceRef.current
+                    );
+                    processFinalUserTranscript(userDiceRef.current);
+                    userDiceRef.current = ""; // Limpiar después de procesar
+                  }
+                }, 2000);
+              }
+            }
+
+            if (!isFinal || speechFinal) {
+              if (timerRef.current) {
+                clearTimeout(timerRef.current);
+                timerRef.current = null;
+              }
+            }
+
+            if (speechFinal) {
+              if (userDiceRef.current.trim() !== "") {
+                processFinalUserTranscript(userDiceRef.current);
+                userDiceRef.current = ""; // Limpiar después de procesar
+              } else {
+                console.log("Final transcript was empty, not processing.");
+              }
+            }
+          } else {
+            console.log("Received unexpected message type:", data.type);
+          }
+        } catch (error) {
+          console.error("Error processing Deepgram response:", error);
+          setDebug("Error processing Deepgram response");
         }
       };
 
-      mediaRecorder.start(500);
+      deepgramSocket.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setDebug("WebSocket error");
+      };
+
+      deepgramSocket.onclose = () => {
+        console.log("WebSocket connection closed");
+      };
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (
+          event.data.size > 0 &&
+          deepgramSocket.readyState === WebSocket.OPEN
+        ) {
+          deepgramSocket.send(event.data);
+        }
+      };
     } catch (error) {
       console.error("Error accessing microphone:", error);
       setDebug("Error accessing microphone");
     }
-  }
-
-  async function startTranscription() {
-    socket.current = new WebSocket("wss://interactivenancibot.onrender.com");
-
-    socket.current.addEventListener("open", () => {
-      console.log("WebSocket: connected");
-    });
-
-    let user_dice = "";
-
-    socket.current.addEventListener("message", (event) => {
-      const data = JSON.parse(event.data);
-      if (data.channel?.alternatives[0]?.transcript) {
-        const transcript = data.channel.alternatives[0].transcript;
-        const isFinal = data.is_final;
-        const speechFinal = data.speech_final;
-
-        console.log("Transcript received:", transcript);
-        console.log("is_final:", isFinal, "speech_final:", speechFinal);
-
-        // Revisar si el avatar está hablando y el botón no ha sido presionado
-        if (avatarState.current === "avatar_start_talking" && !hasInterrupted.current) {
-          console.log(
-            "Avatar is talking and partial transcript received. Interrupting..."
-          );
-
-          // Simular un clic en el botón de interrumpir
-          if (interruptButtonRef.current) {
-            interruptButtonRef.current.click();
-          }
-        }
-
-        if (isFinal) {
-          user_dice += transcript + " ";
-          console.log("Current user_dice:", user_dice);
-
-          // Iniciar temporizador de 2 segundos si is_final es True y speech_final es False
-          if (!speechFinal) {
-            timerRef.current = setTimeout(() => {
-              // Forzar el envío de user_dice como Final User Transcript si no se cancela
-              if (isFinal && !speechFinal) {
-                console.log("Forced Final User Transcript:", user_dice);
-                processFinalUserTranscript(user_dice); // Usar el flujo natural
-                user_dice = ""; // Limpiar user_dice después de procesar
-              }
-            }, 2000);
-          }
-        }
-
-        // Cancelar temporizador si is_final es False o speech_final es True
-        if (!isFinal || speechFinal) {
-          if (timerRef.current) {
-            clearTimeout(timerRef.current);
-            timerRef.current = null;
-          }
-        }
-
-        // Procesar Final User Transcript
-        if (speechFinal) {
-          processFinalUserTranscript(user_dice);
-          user_dice = ""; // Reinicia user_dice después de imprimir la transcripción completa
-        }
-      }
-    });
-
-    socket.current.addEventListener("close", () => {
-      console.log("WebSocket: disconnected");
-    });
   }
 
   // Unificar el flujo de procesamiento para Final User Transcript
@@ -265,7 +313,7 @@ export default function InteractiveAvatar() {
     const startTime = performance.now(); // Start timer
 
     // Verificar usando avatarState.current
-    if (avatarState.current === "avatar_start_talking") {
+    if (avatarState.current === "avatar_start_talking" && transcript.trim() !== "") {
       console.log(
         "Avatar is talking and final user transcript received. Interrupting..."
       );
@@ -275,7 +323,13 @@ export default function InteractiveAvatar() {
         interruptButtonRef.current.click();
       }
     } else {
-      console.log("Avatar is not talking. No action taken.");
+      console.log("Avatar is not talking or transcript is empty. No action taken.");
+    }
+
+    // Solo proceder si el transcripto no está vacío
+    if (transcript.trim() === "") {
+      console.log("Empty transcript, not sending to OpenAI.");
+      return;
     }
 
     try {
@@ -283,12 +337,17 @@ export default function InteractiveAvatar() {
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini-2024-07-18",
         messages: [
-          { role: "system", content: "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, as preguntas al usuario para conocer que le gusta mas" },
+          {
+            role: "system",
+            content:
+              "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, as preguntas al usuario para conocer que le gusta mas",
+          },
           { role: "user", content: transcript },
         ],
       });
 
-      const responseText = response.choices[0]?.message?.content || "No response";
+      const responseText =
+        response.choices[0]?.message?.content || "No response";
       const endTime = performance.now(); // End timer
       const duration = endTime - startTime;
 
@@ -303,10 +362,6 @@ export default function InteractiveAvatar() {
   };
 
   function stopTranscription() {
-    if (socket.current) {
-      socket.current.close();
-      socket.current = null;
-    }
     if (audioStream) {
       audioStream.getTracks().forEach((track) => track.stop());
       setAudioStream(null);
@@ -355,7 +410,8 @@ export default function InteractiveAvatar() {
         overflow: "hidden",
         margin: 0,
         padding: 0,
-        backgroundImage: 'url("https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg")',
+        backgroundImage:
+          'url("https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg")',
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
