@@ -8,11 +8,6 @@ dotenv.config();
 
 const app = express();
 
-// Configuración del servidor HTTPS
-const options = {
-  key: fs.readFileSync("/path/to/your/privatekey.pem"), // Ruta a tu clave privada
-  cert: fs.readFileSync("/path/to/your/certificate.pem"), // Ruta a tu certificado SSL
-};
 
 // Crear el servidor HTTPS
 const server = https.createServer(options, app);
