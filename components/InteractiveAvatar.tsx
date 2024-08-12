@@ -191,7 +191,7 @@ export default function InteractiveAvatar() {
   }
 
   async function startTranscription() {
-    socket.current = new WebSocket("ws://localhost:10001");
+    socket.current = new WebSocket("ws://interactivenancibot.onrender.com");
 
     socket.current.addEventListener("open", () => {
       console.log("WebSocket: connected");
