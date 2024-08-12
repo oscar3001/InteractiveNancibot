@@ -101,6 +101,6 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
-server.listen(3001, () => {
-  console.log("Server is listening on port 3001");
+server.listen(10001, () => {
+  console.log("Server is listening on port 10001");
 });
