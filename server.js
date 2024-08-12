@@ -1,6 +1,5 @@
 const express = require("express");
-const fs = require("fs");
-const https = require("https");
+const http = require("http");  // Cambia https por http
 const WebSocket = require("ws");
 const { createClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
 const dotenv = require("dotenv");
@@ -8,11 +7,10 @@ dotenv.config();
 
 const app = express();
 
+// Crea el servidor HTTP
+const server = http.createServer(app); // Usa http
 
-// Crear el servidor HTTPS
-const server = https.createServer(options, app);
-
-// Crear el servidor WebSocket sobre HTTPS
+// Configura el servidor WebSocket sobre HTTP
 const wss = new WebSocket.Server({ server });
 
 const deepgramClient = createClient(process.env.DEEPGRAM_API_KEY);
@@ -107,7 +105,7 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
-// Cambia el puerto a un puerto HTTPS, si necesario
+// Cambia el puerto a un puerto HTTP, Render manejará SSL
 server.listen(10001, () => {
   console.log("Server is listening on port 10001");
 });
