@@ -101,8 +101,9 @@ app.get("/", (req, res) => {
   res.sendFile(__dirname + "/public/index.html");
 });
 
-server.listen(3001, () => {
-  console.log("Server is listening on port 3001");
+const PORT = process.env.PORT || 3001; // Usa el puerto asignado por Render o un puerto por defecto para desarrollo local
+server.listen(PORT, () => {
+  console.log(`Server is listening on port ${PORT}`);
 });
 
 
