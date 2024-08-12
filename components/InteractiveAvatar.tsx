@@ -44,6 +44,9 @@ export default function InteractiveAvatar() {
   // Usar useRef para almacenar user_dice y persistir su estado
   const userDiceRef = useRef<string>("");
 
+  // Crear una referencia para almacenar el historial de la conversación
+  const conversationHistory = useRef([]);
+
   // Función para manejar la interrupción
   const handleInterrupt = useCallback(async () => {
     if (!initialized || !avatar.current) {
@@ -333,16 +336,20 @@ export default function InteractiveAvatar() {
     }
 
     try {
+      // Add the user's message to the conversation history
+      conversationHistory.current.push({ role: "user", content: transcript });
+
+      // Ensure only the last 10 messages are kept in the history
+      if (conversationHistory.current.length > 60) {
+        conversationHistory.current.shift();
+      }
+
       // Llamada a la API de OpenAI usando chat.completions
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini-2024-07-18",
         messages: [
-          {
-            role: "system",
-            content:
-              "Eres un sommelier virtual experto en vinos, responde de manera muy breve ya que estas en una videollamada, as preguntas al usuario para conocer que le gusta mas",
-          },
-          { role: "user", content: transcript },
+          { role: "system", content: "Eres Nanci bot un sommelier virtual, asesora al cliente y responde de manera muy amigable y breve ya que estas en una videollamada, manten fluida la conversacion haciendo preguntas al usuario para conocer que le gusta más y sus preferencias, (no respondas con simbolos ni emoticones, tampoco enumeres estas en una llamada)." },
+          ...conversationHistory.current // Include conversation history
         ],
       });
 
@@ -353,6 +360,14 @@ export default function InteractiveAvatar() {
 
       console.log("OpenAI response:", responseText);
       console.log(`Request duration: ${duration.toFixed(2)} ms`);
+
+      // Add the assistant's response to the conversation history
+      conversationHistory.current.push({ role: "assistant", content: responseText });
+
+      // Ensure only the last 10 messages are kept in the history
+      if (conversationHistory.current.length > 20) {
+        conversationHistory.current.shift();
+      }
 
       // Actualizar el texto dinámico con el valor recibido de OpenAI
       setDynamicText(responseText);
