@@ -114,7 +114,7 @@ wss.on("connection", (ws) => {
   });
 });
 
-app.use(express.static("public/"));
+app.use(express.static("components/"));
 app.get("/", (req, res) => {
   res.sendFile(__dirname + "/components/InteractiveAvatar.tsx");
 });
