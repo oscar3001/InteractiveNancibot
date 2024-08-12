@@ -191,17 +191,11 @@ export default function InteractiveAvatar() {
   }
 
   async function startTranscription() {
-    socket.current = new WebSocket("wss://interactivenancibot.onrender.com");
+    socket.current = new WebSocket("ws://localhost:3001");
 
     socket.current.addEventListener("open", () => {
       console.log("WebSocket: connected");
     });
-    socket.current.addEventListener("error", (error) => {
-  console.error("WebSocket error:", error);
-});
-  socket.current.addEventListener("close", () => {
-    console.log("WebSocket: disconnected");
-  });
 
     let user_dice = "";
 
