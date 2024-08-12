@@ -203,7 +203,7 @@ export default function InteractiveAvatar() {
       setAudioStream(audioStream);
 
       const mediaRecorder = new MediaRecorder(audioStream, {
-        mimeType: "audio/webm;codecs=opus", // Asegúrate de que el códec es compatible
+        mimeType: "audio/aac", // Asegúrate de que el códec es compatible
       });
 
       const deepgramSocket = new WebSocket(
