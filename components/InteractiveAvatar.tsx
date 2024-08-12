@@ -429,6 +429,9 @@ export default function InteractiveAvatar() {
 
       // Actualizar el texto dinámico con el valor recibido de OpenAI
       setDynamicText(responseText);
+
+      // Llamar a handleSpeak inmediatamente después de actualizar dynamicText
+      handleSpeak();
     } catch (error) {
       console.error("Error calling OpenAI API:", error);
       consoleMessagesRef.current += `Error calling OpenAI API: ${error}\n`;
@@ -471,13 +474,6 @@ export default function InteractiveAvatar() {
       consoleMessagesRef.current += "Stream or mediaStream not set\n";
     }
   }, [mediaStream, videoStream]);
-
-  // Nuevo useEffect para activar automáticamente el botón "Repetir"
-  useEffect(() => {
-    if (dynamicText !== "Texto predefinido a repetir") {
-      handleSpeak();
-    }
-  }, [dynamicText]);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard
@@ -577,15 +573,6 @@ export default function InteractiveAvatar() {
             style={{ display: "none" }} // Ocultar botón Interrumpir
           >
             Interrumpir
-          </Button>
-          <Button
-            size="md"
-            onClick={handleSpeak}
-            className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
-            variant="shadow"
-            style={{ display: "none" }} // Ocultar botón Repetir
-          >
-            Repetir
           </Button>
         </div>
 
