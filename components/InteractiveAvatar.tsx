@@ -21,6 +21,7 @@ export default function InteractiveAvatar() {
   const [dynamicText, setDynamicText] = useState<string>(
     "Texto predefinido a repetir"
   );
+  const [logMessages, setLogMessages] = useState<string[]>([]); // Nuevo estado para los mensajes de consola
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -63,6 +64,11 @@ export default function InteractiveAvatar() {
     hasInterrupted.current = true;
   }, [initialized, avatar.current, sessionId]);
 
+  // Nueva función para añadir mensajes al log
+  const addLogMessage = (message: string) => {
+    setLogMessages((prev) => [...prev, message]);
+  };
+
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -70,9 +76,11 @@ export default function InteractiveAvatar() {
       });
       const token = await response.text();
       console.log("Access Token:", token);
+      addLogMessage("Access Token: " + token); // Añadir al log
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
+      addLogMessage("Error fetching access token: " + error.message); // Añadir al log
       return "";
     }
   }
@@ -123,16 +131,20 @@ export default function InteractiveAvatar() {
 
     const startTalkCallback = (e: any) => {
       console.log("Avatar started talking", e);
+      addLogMessage("Avatar started talking: " + JSON.stringify(e)); // Añadir al log
       avatarState.current = "avatar_start_talking"; // Usar avatarState.current
       hasInterrupted.current = false; // Resetear la bandera al iniciar a hablar
       console.log("Avatar state updated to:", "avatar_start_talking");
+      addLogMessage("Avatar state updated to: avatar_start_talking"); // Añadir al log
     };
 
     const stopTalkCallback = (e: any) => {
       console.log("Avatar stopped talking", e);
+      addLogMessage("Avatar stopped talking: " + JSON.stringify(e)); // Añadir al log
       avatarState.current = "avatar_stop_talking"; // Usar avatarState.current
       hasInterrupted.current = false; // Resetear la bandera al detenerse
       console.log("Avatar state updated to:", "avatar_stop_talking");
+      addLogMessage("Avatar state updated to: avatar_stop_talking"); // Añadir al log
     };
 
     avatar.current.addEventHandler("avatar_start_talking", startTalkCallback);
@@ -201,6 +213,7 @@ export default function InteractiveAvatar() {
 
       deepgramSocket.onopen = () => {
         console.log("WebSocket connection opened to Deepgram");
+        addLogMessage("WebSocket connection opened to Deepgram"); // Añadir al log
         mediaRecorder.start(250); // Start recording with 250ms buffer size
       };
 
@@ -208,6 +221,7 @@ export default function InteractiveAvatar() {
         try {
           const data = JSON.parse(event.data);
           console.log("Deepgram response:", data);
+          addLogMessage("Deepgram response: " + JSON.stringify(data)); // Añadir al log
 
           // Handle SpeechStarted event
           if (data.type === "SpeechStarted") {
@@ -229,6 +243,9 @@ export default function InteractiveAvatar() {
 
             console.log("Transcript received:", transcript);
             console.log("is_final:", isFinal, "speech_final:", speechFinal);
+            addLogMessage(
+              `Transcript received: ${transcript} | is_final: ${isFinal} | speech_final: ${speechFinal}`
+            ); // Añadir al log
 
             if (
               transcript.trim() !== "" && // Verificar que el transcripto no esté vacío
@@ -238,6 +255,9 @@ export default function InteractiveAvatar() {
               console.log(
                 "Avatar is talking and partial transcript received. Interrupting..."
               );
+              addLogMessage(
+                "Avatar is talking and partial transcript received. Interrupting..."
+              ); // Añadir al log
               if (interruptButtonRef.current) {
                 interruptButtonRef.current.click();
               }
@@ -247,6 +267,7 @@ export default function InteractiveAvatar() {
               if (transcript.trim() !== "") {
                 userDiceRef.current += transcript + " ";
                 console.log("Current user_dice:", userDiceRef.current);
+                addLogMessage("Current user_dice: " + userDiceRef.current); // Añadir al log
               }
 
               if (!speechFinal) {
@@ -256,6 +277,9 @@ export default function InteractiveAvatar() {
                       "Forced Final User Transcript:",
                       userDiceRef.current
                     );
+                    addLogMessage(
+                      "Forced Final User Transcript: " + userDiceRef.current
+                    ); // Añadir al log
                     processFinalUserTranscript(userDiceRef.current);
                     userDiceRef.current = ""; // Limpiar después de procesar
                   }
@@ -276,24 +300,29 @@ export default function InteractiveAvatar() {
                 userDiceRef.current = ""; // Limpiar después de procesar
               } else {
                 console.log("Final transcript was empty, not processing.");
+                addLogMessage("Final transcript was empty, not processing."); // Añadir al log
               }
             }
           } else {
             console.log("Received unexpected message type:", data.type);
+            addLogMessage("Received unexpected message type: " + data.type); // Añadir al log
           }
         } catch (error) {
           console.error("Error processing Deepgram response:", error);
           setDebug("Error processing Deepgram response");
+          addLogMessage("Error processing Deepgram response: " + error.message); // Añadir al log
         }
       };
 
       deepgramSocket.onerror = (error) => {
         console.error("WebSocket error:", error);
         setDebug("WebSocket error");
+        addLogMessage("WebSocket error: " + error.message); // Añadir al log
       };
 
       deepgramSocket.onclose = () => {
         console.log("WebSocket connection closed");
+        addLogMessage("WebSocket connection closed"); // Añadir al log
       };
 
       mediaRecorder.ondataavailable = (event) => {
@@ -307,12 +336,14 @@ export default function InteractiveAvatar() {
     } catch (error) {
       console.error("Error accessing microphone:", error);
       setDebug("Error accessing microphone");
+      addLogMessage("Error accessing microphone: " + error.message); // Añadir al log
     }
   }
 
   // Unificar el flujo de procesamiento para Final User Transcript
   const processFinalUserTranscript = async (transcript: string) => {
     console.log("Processing transcript:", transcript);
+    addLogMessage("Processing transcript: " + transcript); // Añadir al log
     const startTime = performance.now(); // Start timer
 
     // Verificar usando avatarState.current
@@ -320,6 +351,9 @@ export default function InteractiveAvatar() {
       console.log(
         "Avatar is talking and final user transcript received. Interrupting..."
       );
+      addLogMessage(
+        "Avatar is talking and final user transcript received. Interrupting..."
+      ); // Añadir al log
 
       // Simular un clic en el botón de interrumpir
       if (interruptButtonRef.current) {
@@ -327,11 +361,13 @@ export default function InteractiveAvatar() {
       }
     } else {
       console.log("Avatar is not talking or transcript is empty. No action taken.");
+      addLogMessage("Avatar is not talking or transcript is empty. No action taken."); // Añadir al log
     }
 
     // Solo proceder si el transcripto no está vacío
     if (transcript.trim() === "") {
       console.log("Empty transcript, not sending to OpenAI.");
+      addLogMessage("Empty transcript, not sending to OpenAI."); // Añadir al log
       return;
     }
 
@@ -359,7 +395,9 @@ export default function InteractiveAvatar() {
       const duration = endTime - startTime;
 
       console.log("OpenAI response:", responseText);
+      addLogMessage("OpenAI response: " + responseText); // Añadir al log
       console.log(`Request duration: ${duration.toFixed(2)} ms`);
+      addLogMessage(`Request duration: ${duration.toFixed(2)} ms`); // Añadir al log
 
       // Add the assistant's response to the conversation history
       conversationHistory.current.push({ role: "assistant", content: responseText });
@@ -373,6 +411,7 @@ export default function InteractiveAvatar() {
       setDynamicText(responseText);
     } catch (error) {
       console.error("Error calling OpenAI API:", error);
+      addLogMessage("Error calling OpenAI API: " + error.message); // Añadir al log
     }
   };
 
@@ -408,6 +447,7 @@ export default function InteractiveAvatar() {
       };
     } else {
       console.warn("Stream or mediaStream not set");
+      addLogMessage("Stream or mediaStream not set"); // Añadir al log
     }
   }, [mediaStream, videoStream]);
 
@@ -464,14 +504,31 @@ export default function InteractiveAvatar() {
               </video>
             </div>
           ) : !isLoadingSession ? (
-            <Button
-              size="md"
-              onClick={startSession}
-              className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
-              variant="shadow"
-            >
-              Iniciar sesión
-            </Button>
+            <>
+              <Button
+                size="md"
+                onClick={startSession}
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
+                variant="shadow"
+              >
+                Iniciar sesión
+              </Button>
+              <div
+                className="bg-white p-2 mt-4 rounded-lg"
+                style={{
+                  height: "200px",
+                  width: "80%",
+                  overflowY: "scroll",
+                  border: "1px solid #ccc",
+                }}
+              >
+                {logMessages.map((message, index) => (
+                  <div key={index} style={{ fontSize: "0.9rem" }}>
+                    {message}
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <Spinner size="lg" color="default" />
           )}
