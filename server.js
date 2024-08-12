@@ -4,7 +4,7 @@ const WebSocket = require("ws");
 const { createClient, LiveTranscriptionEvents } = require("@deepgram/sdk");
 const dotenv = require("dotenv");
 dotenv.config();
-
+const PORT = process.env.PORT;
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
