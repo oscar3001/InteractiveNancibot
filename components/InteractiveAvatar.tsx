@@ -24,8 +24,8 @@ export default function InteractiveAvatar() {
   const avatar = useRef<StreamingAvatarApi | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [sessionId, setSessionId] = useState<string>("");
-  const avatarId = "676a3ab0273440418ceb007502ab372c";
-  const voiceId = "5a9c9650cfca44ca98d6b2297c7fb5e2";
+  const avatarId = "e4c17778854d498fbaf942dc6b7079c4";
+  const voiceId = "56dbe24c7bfb4fc0b4939c5663733855";
   const captions = useRef<HTMLDivElement>(null);
 
   // Usar useRef para almacenar el estado del avatar y evitar problemas de actualización
