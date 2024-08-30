@@ -424,7 +424,7 @@ export default function InteractiveAvatar() {
         margin: 0,
         padding: 0,
         backgroundImage:
-          'url("https://forevertalents.com/wp-content/uploads/2024/07/nanci-bot-background.jpg")',
+          'url("https://forevertalents.com/wp-content/uploads/2024/08/zaira-bot-background.jpg")',
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
