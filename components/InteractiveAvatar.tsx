@@ -266,7 +266,7 @@ export default function InteractiveAvatar() {
       )}
 
       {/* Definición de la animación de parpadeo */}
-      <style jsx>{`
+      <style>{`
         .overlay-blink {
           animation: blink 2s infinite;
         }
