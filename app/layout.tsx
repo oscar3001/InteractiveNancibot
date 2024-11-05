@@ -19,8 +19,8 @@ const fontMono = FontMono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Waryl Avatar Nancibot",
-    template: `%s - Waryl Avatar Nancibot`,
+    default: "Waryl Avatar Zaira bot",
+    template: `%s - Waryl Avatar Zaira bot`,
   },
   icons: {
     icon: "/waryl_1024.png",
