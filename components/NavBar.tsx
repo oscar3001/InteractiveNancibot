@@ -15,7 +15,7 @@ export default function NavBar() {
   return (
     <Navbar className="w-full hidden sr-only">
       <NavbarBrand>
-        <Link isExternal aria-label="HeyGen" href="https://app.heygen.com/">
+        <Link isExternal aria-label="Waryl" href="https://waryl.com/">
           <HeyGenLogo />
         </Link>
         <div className="bg-gradient-to-br from-sky-300 to-indigo-500 bg-clip-text ml-4">

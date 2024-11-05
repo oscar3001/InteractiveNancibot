@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     template: `%s - Waryl Avatar Nancibot`,
   },
   icons: {
-    icon: "/heygen-logo.png",
+    icon: "/waryl_1024.png",
   },
 };
 
