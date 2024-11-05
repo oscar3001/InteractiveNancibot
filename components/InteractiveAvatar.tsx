@@ -68,10 +68,10 @@ export default function InteractiveAvatar() {
 
     try {
       await avatar.current.createStartAvatar({
-        quality: AvatarQuality.Low,
+        quality: AvatarQuality.Medium,
         avatarName: avatarId,
         voice: {
-          rate: 1.5, // 0.5 ~ 1.5
+          rate: 1, // 0.5 ~ 1.5
           emotion: VoiceEmotion.EXCITED,
         },
         language: language,
