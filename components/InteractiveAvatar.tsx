@@ -1,4 +1,3 @@
-import type { StartAvatarResponse } from "@heygen/streaming-avatar";
 import StreamingAvatar, {
   AvatarQuality,
   StreamingEvents,
@@ -7,7 +6,6 @@ import StreamingAvatar, {
 import { useEffect, useRef, useState } from "react";
 import { FaPhone, FaPhoneSlash, FaSpinner } from "react-icons/fa";
 import { IconContext } from "react-icons";
-import { Spinner } from "@nextui-org/react";
 
 // Función para normalizar cadenas (eliminar acentos, signos de puntuación y convertir a minúsculas)
 const normalizeString = (str: string) =>
@@ -57,11 +55,14 @@ export default function InteractiveAvatar() {
         method: "POST",
       });
       const token = await response.text();
+
       console.log("Access Token:", token); // Verificar el token
+
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
     }
+
     return "";
   }
 
@@ -82,10 +83,11 @@ export default function InteractiveAvatar() {
       console.log("Avatar stopped talking");
       const taskId = e.detail.task_id;
       const fullMessage = avatarMessages.current.get(taskId) || "";
+
       console.log("Mensaje del avatar:", fullMessage);
       // Eliminamos el mensaje del Map
       avatarMessages.current.delete(taskId);
-    
+
       // Enviar el mensaje al webhook y procesar la respuesta
       try {
         console.log("Enviando mensaje al webhook...");
@@ -97,19 +99,20 @@ export default function InteractiveAvatar() {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({ message: fullMessage }),
-          }
+          },
         );
-    
+
         const jsonResponse = await webhookResponse.json();
+
         console.log("Respuesta del webhook:", jsonResponse);
-    
+
         // Ajuste aquí: acceder directamente a jsonResponse.intencion
         if (jsonResponse && jsonResponse.intencion) {
           const { intencion, musica_nombre } = jsonResponse;
-    
+
           console.log("Intención:", intencion);
           console.log("Música nombre:", musica_nombre);
-    
+
           // Manejar acciones basadas en 'intencion'
           switch (intencion) {
             case "reproducir":
@@ -119,9 +122,10 @@ export default function InteractiveAvatar() {
                   const normalizedSongName = normalizeString(song.name);
                   const songFound =
                     normalizeString(musica_nombre) === normalizedSongName;
+
                   return songFound;
                 });
-    
+
                 if (foundSong) {
                   console.log("Canción encontrada:", foundSong.name);
                   // Reproducir la canción
@@ -135,27 +139,29 @@ export default function InteractiveAvatar() {
                 }
               }
               break;
-    
+
             case "subir_volumen":
               // Aumentar el volumen
               const adjustedUp = adjustVolume(0.3); // Aumenta el volumen en un 30%
+
               if (adjustedUp) {
                 console.log("Subiendo el volumen.");
               } else {
                 console.log("No hay música reproduciéndose.");
               }
               break;
-    
+
             case "bajar_volumen":
               // Disminuir el volumen
               const adjustedDown = adjustVolume(-0.3); // Disminuye el volumen en un 30%
+
               if (adjustedDown) {
                 console.log("Bajando el volumen.");
               } else {
                 console.log("No hay música reproduciéndose.");
               }
               break;
-    
+
             case "detener":
               // Detener la música
               if (audioRef.current) {
@@ -165,10 +171,10 @@ export default function InteractiveAvatar() {
                 console.log("No hay música reproduciéndose.");
               }
               break;
-    
+
             default:
               console.log("Intención desconocida o no se requiere acción.");
-              // No hacer nada
+            // No hacer nada
           }
         } else {
           console.log("Respuesta del webhook no tiene el formato esperado.");
@@ -176,7 +182,7 @@ export default function InteractiveAvatar() {
       } catch (error) {
         console.error(
           "Error al enviar o procesar la respuesta del webhook:",
-          error
+          error,
         );
       }
     });
@@ -208,21 +214,25 @@ export default function InteractiveAvatar() {
         console.log("Mensaje del usuario:", messageEvent.detail.message);
 
         // Aquí puedes mantener tu lógica actual o adaptarla según necesites
-      }
+      },
     );
 
     // Evento para capturar los fragmentos del mensaje del avatar
-    avatar.current.on(StreamingEvents.AVATAR_TALKING_MESSAGE, (messageEvent) => {
-      const taskId = messageEvent.detail.task_id;
-      const messagePart = messageEvent.detail.message;
+    avatar.current.on(
+      StreamingEvents.AVATAR_TALKING_MESSAGE,
+      (messageEvent) => {
+        const taskId = messageEvent.detail.task_id;
+        const messagePart = messageEvent.detail.message;
 
-      if (!avatarMessages.current.has(taskId)) {
-        avatarMessages.current.set(taskId, "");
-      }
-      // Concatenar el fragmento al mensaje correspondiente
-      const currentMessage = avatarMessages.current.get(taskId)!;
-      avatarMessages.current.set(taskId, currentMessage + messagePart);
-    });
+        if (!avatarMessages.current.has(taskId)) {
+          avatarMessages.current.set(taskId, "");
+        }
+        // Concatenar el fragmento al mensaje correspondiente
+        const currentMessage = avatarMessages.current.get(taskId)!;
+
+        avatarMessages.current.set(taskId, currentMessage + messagePart);
+      },
+    );
 
     try {
       await avatar.current.createStartAvatar({
@@ -266,6 +276,7 @@ export default function InteractiveAvatar() {
       audioRef.current = null;
     }
     const newAudio = new Audio(file);
+
     newAudio.volume = 0.5; // Volumen inicial al 50%
     newAudio.play().catch((error) => {
       console.error("Error al reproducir la canción:", error);
@@ -296,13 +307,16 @@ export default function InteractiveAvatar() {
   const adjustVolume = (change: number) => {
     if (audioRef.current) {
       let newVolume = audioRef.current.volume + change;
+
       // Asegurarse de que el volumen esté entre 0 y 1
       newVolume = Math.min(Math.max(newVolume, 0), 1);
       audioRef.current.volume = newVolume;
       console.log(`Volumen ajustado a: ${Math.round(newVolume * 100)}%`);
+
       return true;
     } else {
       console.log("No hay ninguna canción reproduciéndose.");
+
       return false;
     }
   };
@@ -333,6 +347,7 @@ export default function InteractiveAvatar() {
   // Animación de los puntos en "Escuchando..."
   useEffect(() => {
     let interval: NodeJS.Timeout;
+
     if (isUserTalking) {
       interval = setInterval(() => {
         setDots((prev) => (prev.length < 3 ? prev + "." : ""));
@@ -340,6 +355,7 @@ export default function InteractiveAvatar() {
     } else {
       setDots("");
     }
+
     return () => {
       clearInterval(interval);
     };
@@ -428,8 +444,8 @@ export default function InteractiveAvatar() {
             {/* Icono para terminar la sesión */}
             <div className="flex flex-col items-center">
               <button
-                onClick={endSession}
                 className="flex justify-center items-center w-20 h-20 rounded-full bg-red-600"
+                onClick={endSession}
               >
                 <IconContext.Provider
                   value={{
@@ -464,8 +480,8 @@ export default function InteractiveAvatar() {
             {/* Icono para iniciar la sesión */}
             <div className="flex flex-col items-center">
               <button
-                onClick={startSession}
                 className="animate-pulse flex justify-center items-center w-20 h-20 rounded-full bg-green-600"
+                onClick={startSession}
               >
                 <IconContext.Provider
                   value={{
@@ -497,7 +513,7 @@ export default function InteractiveAvatar() {
       )}
 
       {/* Definición de la animación de parpadeo */}
-      <style jsx>{`
+      <style>{`
         .overlay-blink {
           animation: blink 2s infinite;
         }
